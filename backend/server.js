@@ -34,20 +34,24 @@ app.use(
 );
 
 // â”€â”€â”€ CORS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const normalizeOrigin = (value = '') => value.trim().replace(/\/+$/, '');
+
 const allowedOrigins = (
+    process.env.CORS_ORIGINS ||
     process.env.FRONTEND_URLS ||
     process.env.FRONTEND_URL ||
     'http://localhost:3000'
 )
     .split(',')
-    .map((origin) => origin.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
 
 const corsOptions = {
     origin: (origin, callback) => {
         // Allow server-to-server calls or tools like curl/postman without Origin
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) return callback(null, true);
+        const requestOrigin = normalizeOrigin(origin);
+        if (allowedOrigins.includes(requestOrigin)) return callback(null, true);
         return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
