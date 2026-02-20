@@ -6,12 +6,22 @@
 const { openai, OPENAI_MODEL } = require('../config/openai');
 const { SPECIALIZATIONS, getSpecializationNamesForPrompt } = require('../utils/specializations');
 
+const ensureOpenAIConfigured = () => {
+    if (!openai) {
+        const error = new Error('OPENAI_API_KEY is not configured.');
+        error.statusCode = 503;
+        throw error;
+    }
+};
+
 /**
  * Analyze CV text and extract structured profile data
  * @param {string} cvText - Raw text extracted from CV/PDF
  * @returns {Object} Extracted profile data
  */
 const extractProfileFromCV = async (cvText) => {
+    ensureOpenAIConfigured();
+
     const prompt = `Eres un experto en análisis de CVs y perfiles profesionales. 
 Analiza el siguiente CV y extrae la información estructurada en formato JSON.
 
@@ -65,6 +75,8 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
  * @returns {Object} Recommendation with specialization, reasoning, and match score
  */
 const generateRecommendation = async (profile, sourceType = 'pdf') => {
+    ensureOpenAIConfigured();
+
     const specializationsList = getSpecializationNamesForPrompt();
 
     const prompt = `Eres un asesor académico experto de LAR University, una institución de educación ejecutiva de élite.
@@ -138,6 +150,8 @@ Los IDs válidos son: comunicacion, emprendimiento, finanzas, talento, tecnologi
  * @returns {string} AI response
  */
 const generateChatResponse = async (messages, userProfile = null, recommendation = null) => {
+    ensureOpenAIConfigured();
+
     const systemPrompt = `Eres un asesor académico experto y amigable de LAR University, una institución de educación ejecutiva de élite. 
 Tu nombre es "LAR Advisor" y tu misión es ayudar a los profesionales a encontrar la especialización perfecta para potenciar su carrera.
 
@@ -187,6 +201,8 @@ INSTRUCCIONES:
  * @returns {Object} Profile data and recommendation
  */
 const analyzeLinkedInProfile = async (linkedinUrl) => {
+    ensureOpenAIConfigured();
+
     // Note: Direct LinkedIn scraping requires their API or a third-party service.
     // This implementation asks the user to paste their LinkedIn summary instead.
     const prompt = `Eres un experto en análisis de perfiles profesionales de LinkedIn.
