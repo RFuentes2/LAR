@@ -36,7 +36,7 @@ app.use(
 // â”€â”€â”€ CORS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const normalizeOrigin = (value = '') => value.trim().replace(/\/+$/, '');
 
-const allowedOrigins = (
+const configuredOrigins = (
     process.env.CORS_ORIGINS ||
     process.env.FRONTEND_URLS ||
     process.env.FRONTEND_URL ||
@@ -45,6 +45,8 @@ const allowedOrigins = (
     .split(',')
     .map(normalizeOrigin)
     .filter(Boolean);
+
+const allowedOrigins = Array.from(new Set(configuredOrigins.map(normalizeOrigin)));
 
 const corsOptions = {
     origin: (origin, callback) => {

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://backend-onboarding-866351374703.europe-southwest1.run.app/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
     baseURL: API_URL,
