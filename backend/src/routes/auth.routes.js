@@ -29,21 +29,22 @@ const registerValidation = [
     body('email')
         .trim()
         .notEmpty().withMessage('El email es requerido')
-        .isEmail().withMessage('Por favor ingresa un email válido')
+        .isEmail().withMessage('Por favor ingresa un email v\u00e1lido')
         .normalizeEmail(),
     body('password')
-        .notEmpty().withMessage('La contraseña es requerida')
-        .isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
+        .notEmpty().withMessage('La contrase\u00f1a es requerida')
+        .isLength({ min: 6 }).withMessage('La contrase\u00f1a debe tener al menos 6 caracteres'),
 ];
 
 const loginValidation = [
     body('email')
         .trim()
         .notEmpty().withMessage('El email es requerido')
-        .isEmail().withMessage('Por favor ingresa un email válido')
+        .custom((value) => value.includes('@')).withMessage('El email debe contener @')
         .normalizeEmail(),
     body('password')
-        .notEmpty().withMessage('La contraseña es requerida'),
+        .notEmpty().withMessage('La contrase\u00f1a es requerida')
+        .isLength({ min: 6 }).withMessage('La contrase\u00f1a debe tener al menos 6 caracteres'),
 ];
 
 // Validation middleware
@@ -68,3 +69,4 @@ router.put('/update-profile', protect, updateProfile);
 router.put('/change-password', protect, changePassword);
 
 module.exports = router;
+
