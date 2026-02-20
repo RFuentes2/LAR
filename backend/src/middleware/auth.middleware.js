@@ -6,6 +6,21 @@
 
 const jwt = require('jsonwebtoken');
 const { users } = require('../store/memoryStore');
+const FALLBACK_JWT_SECRET = 'dev-only-fallback-secret-change-in-prod';
+let warnedAboutFallbackSecret = false;
+
+const getJwtSecret = () => {
+    if (process.env.JWT_SECRET && process.env.JWT_SECRET.trim()) {
+        return process.env.JWT_SECRET;
+    }
+
+    if (!warnedAboutFallbackSecret) {
+        warnedAboutFallbackSecret = true;
+        console.warn('JWT_SECRET is not set. Using insecure fallback secret. Set JWT_SECRET in Cloud Run.');
+    }
+
+    return FALLBACK_JWT_SECRET;
+};
 
 /**
  * Protect routes - verify JWT token
@@ -28,7 +43,7 @@ const protect = (req, res, next) => {
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, getJwtSecret());
 
         const user = users.findById(decoded.id);
 
@@ -85,7 +100,7 @@ const restrictTo = (...roles) => {
  * Generate JWT token
  */
 const generateToken = (userId) => {
-    return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+    return jwt.sign({ id: userId }, getJwtSecret(), {
         expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     });
 };
