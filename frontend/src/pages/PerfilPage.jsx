@@ -53,7 +53,7 @@ const PerfilPage = () => {
             <header className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold mb-2">Mi Perfil Profesional</h1>
-                    <p className="text-dark-muted text-sm">Información extraída de tu último CV analizado</p>
+                    <p className="text-muted text-sm">Información extraída de tu último CV analizado para Lär University</p>
                 </div>
                 <div className="hidden md:block">
                     <span className="px-4 py-2 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full text-sm font-medium">

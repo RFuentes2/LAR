@@ -1,111 +1,121 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { Mail, Lock, Loader2, Sparkles, ArrowRight } from 'lucide-react';
+import ConstellationBackground from '../components/ConstellationBackground';
 
 const LoginPage = () => {
+    const { login } = useAuth();
+    const { isDarkMode } = useTheme();
+    const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-
-    const { login } = useAuth();
-    const navigate = useNavigate();
+    const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
         setLoading(true);
-
+        setError('');
         try {
-            const result = await login(email, password);
-            if (result.success) {
+            const success = await login(email, password);
+            if (success) {
                 navigate('/');
             } else {
-                setError(result.message || 'Error al iniciar sesión');
+                setError('Credenciales inválidas');
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Error de conexión');
+            setError(err.response?.data?.message || 'Error al iniciar sesión');
         } finally {
-            setPassword(''); // Security: clear password from state
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-black flex items-center justify-center p-4">
-            <div className="max-w-md w-full">
-                <div className="text-center mb-10">
-                    <div className="inline-flex items-center justify-center bg-orange-accent p-3 rounded-2xl mb-4">
-                        <GraduationCap className="text-white" size={32} />
+        <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden ${isDarkMode ? 'bg-[#12100E]' : 'bg-[#F8F9FA]'}`}>
+            <ConstellationBackground theme={isDarkMode ? 'dark' : 'light'} />
+
+            <div className="max-w-md w-full relative z-10">
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-orange-accent/10 mb-4">
+                        <svg viewBox="0 0 100 100" className="w-10 h-10">
+                            <polygon points="50,20 15,80 85,80" fill="none" stroke="#FF6B35" strokeWidth="10" />
+                            <rect x="42" y="4" width="7" height="7" fill="#FF6B35" />
+                            <rect x="52" y="4" width="7" height="7" fill="#FF6B35" />
+                        </svg>
                     </div>
-                    <h1 className="text-4xl font-bold mb-2">
-                        Edu<span className="text-orange-accent">AI</span>
+                    <h1 className={`text-3xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-[#1A1A1A]'}`}>
+                        LÄR <span className="text-orange-accent">UNIVERSITY</span>
                     </h1>
-                    <p className="text-dark-muted">Transforma tu carrera con inteligencia artificial</p>
+                    <p className={`text-sm font-medium mt-2 ${isDarkMode ? 'text-stone-400' : 'text-slate-500'}`}>
+                        TU TERCERA VÍA HACIA LA ÉLITE PROFESIONAL
+                    </p>
                 </div>
 
-                <div className="card shadow-2xl border-dark-border/50">
-                    <h2 className="text-2xl font-bold mb-6">Bienvenido de nuevo</h2>
+                <div className={`card ${isDarkMode ? 'bg-[#1C1917]/80 border-[#2E2925]' : 'bg-white border-[#E2E8F0]'} backdrop-blur-xl shadow-2xl`}>
+                    <h2 className={`text-xl font-bold mb-6 text-center ${isDarkMode ? 'text-white' : 'text-[#1A1A1A]'}`}>Bienvenido de nuevo</h2>
 
-                    {error && (
-                        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-sm mb-6">
-                            {error}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-dark-muted">Correo electrónico</label>
+                            <label className={`text-xs font-black uppercase tracking-widest ${isDarkMode ? 'text-stone-500' : 'text-slate-400'}`}>Correo Electrónico</label>
                             <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted" size={18} />
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-accent" size={18} />
                                 <input
                                     type="email"
                                     required
-                                    className="input-field pl-10"
-                                    placeholder="ejemplo@correo.com"
+                                    className="input-field pl-12"
+                                    placeholder="tu@email.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
+                                    autoComplete="email"
+                                    name="email"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-dark-muted">Contraseña</label>
+                            <label className={`text-xs font-black uppercase tracking-widest ${isDarkMode ? 'text-stone-500' : 'text-slate-400'}`}>Contraseña</label>
                             <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted" size={18} />
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-accent" size={18} />
                                 <input
                                     type="password"
                                     required
-                                    className="input-field pl-10"
+                                    className="input-field pl-12"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    autoComplete="current-password"
+                                    name="password"
                                 />
                             </div>
                         </div>
+
+                        {error && (
+                            <div className="text-red-500 text-sm text-center font-bold p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
+                                {error}
+                            </div>
+                        )}
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary w-full h-12 flex items-center justify-center gap-2 group"
+                            className="btn-primary w-full group"
                         >
-                            {loading ? (
-                                <Loader2 className="animate-spin" size={20} />
-                            ) : (
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : (
                                 <>
-                                    <span>Ingresar</span>
-                                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                                    <span>INICIAR SESIÓN</span>
+                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    <div className="mt-8 text-center">
-                        <p className="text-dark-muted text-sm">
-                            ¿No tienes cuenta?{' '}
-                            <Link to="/register" className="text-orange-accent hover:underline font-medium">
-                                Regístrate aquí
+                    <div className="mt-8 pt-6 border-t border-dashed border-stone-800 text-center">
+                        <p className={`text-sm ${isDarkMode ? 'text-stone-400' : 'text-slate-500'}`}>
+                            ¿No tienes una cuenta?{' '}
+                            <Link to="/register" className="text-orange-accent font-black hover:underline underline-offset-4">
+                                REGÍSTRATE AQUÍ
                             </Link>
                         </p>
                     </div>

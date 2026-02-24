@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles, ArrowRight } from 'lucide-react';
 import api from '../services/api';
 import ChatComponent from '../components/ChatComponent';
+import { useTheme } from '../context/ThemeContext';
 
 const HomePage = () => {
+    const { isDarkMode } = useTheme();
     const location = useLocation();
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -78,28 +80,38 @@ const HomePage = () => {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
-            <header>
-                <h1 className="text-3xl font-bold mb-2">Hola, 👋</h1>
-                <p className="text-dark-muted">Sube tu Hoja de Vida (CV) para que nuestra IA la analice y te recomiende tu próximo Sprint profesional.</p>
+        <div className="space-y-8 animate-in fade-in duration-700 relative z-10">
+            <header className="space-y-4">
+                <p className="text-orange-accent font-black tracking-[0.3em] text-[10px]">NO SIGAS RUTAS. TRAZA LA TUYA.</p>
+                <h1 className={`font-['Bebas_Neue'] leading-[0.88] tracking-[-1px] mb-4 ${isDarkMode ? 'text-white' : 'text-light-text'}`} style={{ fontSize: 'clamp(72px, 9vw, 120px)' }}>
+                    IMPULSA TU <span className="text-[#ff5c1a]" style={{ textShadow: '0 0 60px rgba(255,92,26,0.35)' }}>CARRERA</span> <br className="hidden md:block" /> PROFESIONAL.
+                </h1>
+                <p className="text-[#888] font-light text-sm max-w-2xl">
+                    Analizamos tu potencial con inteligencia artificial para recomendarte el camino hacia la élite profesional.
+                </p>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left: Upload or Summary */}
                 <div className="lg:col-span-1 space-y-6">
                     {!analysis ? (
-                        <div className="card border-dashed border-2 border-dark-border hover:border-orange-accent/50 transition-colors flex flex-col items-center justify-center py-12 text-center group h-[600px]">
-                            <div className="bg-dark-border p-5 rounded-full mb-4 group-hover:scale-110 transition-transform duration-300">
-                                <Upload className="text-dark-muted group-hover:text-orange-accent" size={40} />
+                        <div className={`card-premium-left transition-all duration-500 flex flex-col items-center justify-center py-12 text-center group h-[600px] ${isDarkMode ? 'border-orange-accent/20 hover:border-orange-accent/50' : 'border-light-border hover:border-orange-accent/50 bg-white'}`}>
+                            <div className={`p-6 rounded-3xl mb-6 group-hover:scale-110 transition-transform duration-500 ${isDarkMode ? 'bg-orange-accent/10' : 'bg-orange-accent/5'}`}>
+                                <Upload className="text-orange-accent" size={48} />
                             </div>
-                            <div className="space-y-4 px-6">
-                                <h3 className="text-xl font-semibold">Análisis Profesional</h3>
-                                <p className="text-dark-muted text-sm italic">Sube tu Hoja de Vida en PDF para comenzar la asesoría personalizada.</p>
 
-                                <div className="flex flex-col items-center gap-4">
-                                    <label className="btn-secondary flex items-center gap-2 cursor-pointer w-full justify-center truncate">
-                                        <FileText size={18} />
-                                        <span className="truncate max-w-[120px]">{file ? file.name : 'Seleccionar PDF'}</span>
+                            <div className="space-y-6 px-8 relative z-10">
+                                <div>
+                                    <h3 className={`text-2xl font-black mb-2 ${isDarkMode ? 'text-white' : 'text-light-text'}`}>ANÁLISIS DE ÉLITE</h3>
+                                    <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-dark-muted' : 'text-light-muted'}`}>
+                                        Sube tu Hoja de Vida en PDF para obtener una auditoría de perfil personalizada.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-col gap-4">
+                                    <label className="btn-primary w-full cursor-pointer">
+                                        <FileText size={20} />
+                                        <span>{file ? file.name : 'SELECCIONAR PDF'}</span>
                                         <input type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
                                     </label>
 
@@ -107,9 +119,15 @@ const HomePage = () => {
                                         <button
                                             onClick={handleUpload}
                                             disabled={uploading}
-                                            className="btn-primary w-full flex items-center justify-center gap-2"
+                                            className="btn-secondary w-full group"
                                         >
-                                            {uploading ? <Loader2 className="animate-spin" size={20} /> : <><Sparkles size={18} /><span>Analizar CV</span></>}
+                                            {uploading ? <Loader2 className="animate-spin" size={20} /> : (
+                                                <>
+                                                    <Sparkles size={20} className="text-orange-accent" />
+                                                    <span className="font-bold">TRAZAR RUTA</span>
+                                                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
+                                                </>
+                                            )}
                                         </button>
                                     )}
                                 </div>
@@ -117,26 +135,26 @@ const HomePage = () => {
                         </div>
                     ) : (
                         <div className="animate-in slide-in-from-left duration-500 space-y-6">
-                            <div className="card border-green-500/20 bg-green-500/5">
+                            <div className={`card ${isDarkMode ? 'border-green-500/20 bg-green-500/5' : 'border-green-500/30 bg-green-50/50'}`}>
                                 <div className="flex items-center gap-3 mb-4">
                                     <CheckCircle className="text-green-500" size={20} />
                                     <h3 className="font-bold text-green-500">Hoja de Vida Analizada</h3>
                                 </div>
                                 <div className="space-y-4">
                                     <div>
-                                        <p className="text-xs text-dark-muted uppercase font-bold mb-1">Rol Detectado</p>
-                                        <p className="font-semibold text-lg">{analysis.extractedProfile?.currentRole || 'Profesional'}</p>
+                                        <p className={`text-xs uppercase font-bold mb-1 ${isDarkMode ? 'text-dark-muted' : 'text-light-muted'}`}>Rol Detectado</p>
+                                        <p className={`font-semibold text-lg ${isDarkMode ? 'text-white' : 'text-light-text'}`}>{analysis.extractedProfile?.currentRole || 'Profesional'}</p>
                                     </div>
-                                    <div className="p-4 bg-dark-bg rounded-xl border border-dark-border">
+                                    <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-dark-bg border-dark-border' : 'bg-light-bg border-light-border'}`}>
                                         <p className="text-xs text-orange-accent font-bold mb-1">SPRINT RECOMENDADO:</p>
-                                        <p className="text-sm font-medium leading-relaxed">{analysis.recommendation?.primarySpecialization}</p>
+                                        <p className={`text-sm font-medium leading-relaxed ${isDarkMode ? 'text-dark-text' : 'text-light-text'}`}>{analysis.recommendation?.primarySpecialization}</p>
                                     </div>
                                     {analysis.recommendation?.sprintUrl && (
                                         <a
                                             href={analysis.recommendation.sprintUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="btn-secondary w-full text-center text-xs py-2 block"
+                                            className={`btn-secondary w-full text-center text-xs py-2 block ${!isDarkMode ? 'bg-light-bg text-light-text border-light-border' : ''}`}
                                         >
                                             Ver detalles del Sprint
                                         </a>
@@ -146,7 +164,7 @@ const HomePage = () => {
 
                             <button
                                 onClick={() => { setAnalysis(null); setFile(null); setChatId(null); }}
-                                className="w-full text-center text-sm text-dark-muted hover:text-white transition-colors"
+                                className={`w-full text-center text-sm transition-colors ${isDarkMode ? 'text-dark-muted hover:text-white' : 'text-light-muted hover:text-light-text'}`}
                             >
                                 ← Analizar otra Hoja de Vida
                             </button>

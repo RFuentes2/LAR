@@ -4,20 +4,22 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    darkMode: 'class',
     theme: {
         extend: {
             colors: {
-                orange: {
-                    accent: "#FF6B35",
-                    hover: "#E85A2A",
-                },
-                dark: {
-                    bg: "#000000",
-                    card: "#121212",
-                    border: "#2A2A2A",
-                    text: "#E0E0E0",
-                    muted: "#9CA3AF",
-                }
+                "orange-accent": "rgb(var(--accent-rgb) / <alpha-value>)",
+                "orange-hover": "rgb(var(--accent-hover-rgb, var(--accent-rgb)) / <alpha-value>)",
+                "dark-bg": "rgb(var(--bg-rgb) / <alpha-value>)",
+                "dark-card": "rgb(var(--card-rgb) / <alpha-value>)",
+                "dark-border": "rgb(var(--border-rgb) / <alpha-value>)",
+                "dark-text": "rgb(var(--text-rgb) / <alpha-value>)",
+                "dark-muted": "rgb(var(--muted-rgb) / <alpha-value>)",
+                "light-bg": "rgb(var(--bg-rgb) / <alpha-value>)",
+                "light-card": "rgb(var(--card-rgb) / <alpha-value>)",
+                "light-border": "rgb(var(--border-rgb) / <alpha-value>)",
+                "light-text": "rgb(var(--text-rgb) / <alpha-value>)",
+                "light-muted": "rgb(var(--muted-rgb) / <alpha-value>)",
             },
         },
     },
