@@ -3,13 +3,21 @@ import { Send, Bot, User, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 
-const ChatComponent = ({ chatId, cvAnalysisId }) => {
+const SUGGESTED_QUESTIONS = [
+    "¿De qué se trata el sprint?",
+    "¿Cuál es el sprint 1?",
+    "¿Por qué elegiste esta ruta?",
+    "¿Qué habilidades desarrollaré?"
+];
+
+const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints }) => {
     const { isDarkMode } = useTheme();
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [sending, setSending] = useState(false);
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
+    const lastHandledAnalysisId = useRef(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -21,6 +29,23 @@ const ChatComponent = ({ chatId, cvAnalysisId }) => {
         }
     }, [chatId]);
 
+    // Handle automatic greeting when analysis is ready
+    useEffect(() => {
+        if (cvAnalysisId && cvAnalysisId !== lastHandledAnalysisId.current && chatId) {
+            const welcomeText = `Hola ${userName || 'estudiante'}, es un gusto saludarte. Ya que perteneces al master ${selectedMaster}, tu ruta ideal para completar tu camino de excelencia es:\n\n${sprints.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n¿En qué sprint te gustaría profundizar hoy?`;
+
+            // Artificial delay to feel natural after analysis
+            setTimeout(() => {
+                setMessages(prev => {
+                    // Avoid duplicating if already present
+                    if (prev.some(m => m.content.includes(welcomeText.substring(0, 20)))) return prev;
+                    return [...prev, { role: 'assistant', content: welcomeText }];
+                });
+                lastHandledAnalysisId.current = cvAnalysisId;
+            }, 1000);
+        }
+    }, [cvAnalysisId, chatId, userName, selectedMaster, sprints]);
+
     useEffect(scrollToBottom, [messages]);
 
     const fetchChatHistory = async () => {
@@ -28,7 +53,8 @@ const ChatComponent = ({ chatId, cvAnalysisId }) => {
         try {
             const response = await api.get(`/chat/${chatId}`);
             if (response.data.success) {
-                setMessages(response.data.data.chat.messages || []);
+                const history = response.data.data.chat.messages || [];
+                setMessages(history);
             }
         } catch (error) {
             console.error('Error fetching chat:', error);
@@ -40,11 +66,12 @@ const ChatComponent = ({ chatId, cvAnalysisId }) => {
     const userMessagesCount = messages.filter(m => m.role === 'user').length;
     const isLimitReached = userMessagesCount >= 2;
 
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (!input.trim() || sending || !chatId || isLimitReached) return;
+    const handleSendMessage = async (e, textOverride = null) => {
+        if (e) e.preventDefault();
+        const content = textOverride || input;
+        if (!content.trim() || sending || !chatId || isLimitReached) return;
 
-        const userMsg = { role: 'user', content: input.trim() };
+        const userMsg = { role: 'user', content: content.trim() };
         setMessages((prev) => [...prev, userMsg]);
         setInput('');
         setSending(true);
@@ -70,48 +97,56 @@ const ChatComponent = ({ chatId, cvAnalysisId }) => {
         }
     };
 
+    const handleSuggestionClick = (question) => {
+        handleSendMessage(null, question);
+    };
+
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center p-12 space-y-4">
+            <div className="flex flex-col items-center justify-center p-12 space-y-4 h-full bg-card/5 rounded-3xl animate-pulse">
                 <Loader2 className="animate-spin text-orange-accent" size={32} />
-                <p className={isDarkMode ? 'text-dark-muted' : 'text-light-muted'}>Cargando conversación...</p>
+                <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-dark-muted' : 'text-light-muted'}`}>Sincronizando con LÄR AI...</p>
             </div>
         );
     }
 
     return (
-        <div className={`flex flex-col h-[600px] card-premium border-l-2 border-orange-accent/60 transition-all duration-300 ${isDarkMode ? '' : 'bg-white border-light-border shadow-gray-200'}`}>
+        <div className={`flex flex-col h-full min-h-[600px] border-l-4 border-orange-accent/60 transition-all duration-500 overflow-hidden relative rounded-3xl shadow-2xl ${isDarkMode ? 'bg-[#1C1917]/40 border-[#2E2925]' : 'bg-white border-light-border'}`}>
             {/* Header */}
-            <div className={`p-4 border-b flex items-center justify-between ${isDarkMode ? 'border-dark-border bg-dark-card/50' : 'border-light-border bg-light-bg/50'} backdrop-blur-md`}>
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-orange-accent/20 flex items-center justify-center">
-                        <Wand2 className="text-orange-accent" size={24} />
+            <div className={`p-5 border-b flex items-center justify-between ${isDarkMode ? 'border-dark-border bg-dark-card/30' : 'border-light-border bg-light-bg/30'} backdrop-blur-xl z-20`}>
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-accent/10 flex items-center justify-center border border-orange-accent/20">
+                            <Bot className="text-orange-accent" size={28} />
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-[#1C1917] rounded-full animate-pulse"></span>
                     </div>
                     <div>
-                        <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-light-text'}`}>Asistente Lär University</h3>
-                        <p className="text-xs text-green-500 flex items-center gap-1">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> En línea
-                        </p>
+                        <h3 className={`font-black tracking-tight text-lg ${isDarkMode ? 'text-white' : 'text-light-text'}`}>LÄR <span className="text-orange-accent italic">AI</span></h3>
+                        <p className={`text-[9px] uppercase font-bold tracking-[0.2em] ${isDarkMode ? 'text-dark-muted' : 'text-light-muted'}`}>Compañero de Élite</p>
                     </div>
                 </div>
                 {chatId && (
-                    <div className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-md ${isDarkMode ? 'bg-dark-border text-dark-muted' : 'bg-light-border text-light-muted'}`}>
-                        Consultas: {userMessagesCount}/2
+                    <div className={`text-[9px] uppercase tracking-widest font-black px-3 py-1.5 rounded-xl border ${isDarkMode ? 'bg-orange-accent/10 border-orange-accent/20 text-orange-accent' : 'bg-orange-accent/5 border-orange-accent/10 text-orange-accent'}`}>
+                        Potencial Analizado: {userMessagesCount}/2
                     </div>
                 )}
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide bg-gradient-to-b from-transparent to-orange-accent/[0.02]">
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
                 {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
-                        <div className="bg-orange-accent/10 p-6 rounded-3xl mb-2 border border-orange-accent/20">
-                            <Sparkles className="text-orange-accent" size={48} />
+                    <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-6">
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-orange-accent blur-3xl opacity-10 animate-pulse"></div>
+                            <div className="relative bg-orange-accent/10 p-8 rounded-[2rem] border border-orange-accent/20">
+                                <Sparkles className="text-orange-accent" size={56} />
+                            </div>
                         </div>
-                        <div>
-                            <p className={`text-2xl font-black mb-2 ${isDarkMode ? 'text-white' : 'text-light-text'}`}>ASISTENTE LÄR</p>
-                            <p className={`text-sm max-w-xs leading-relaxed ${isDarkMode ? 'text-dark-muted' : 'text-light-muted'}`}>
-                                Comencemos a trazar tu ruta. Analiza tu CV para recibir asesoría personalizada sobre tu futuro profesional.
+                        <div className="space-y-3">
+                            <p className={`text-3xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-light-text'}`}>COMIENZA EL VIAJE</p>
+                            <p className={`text-xs max-w-xs mx-auto leading-relaxed font-medium uppercase tracking-widest opacity-60 ${isDarkMode ? 'text-dark-muted' : 'text-light-muted'}`}>
+                                Tu futuro no es cuestión de suerte, es cuestión de estrategia.
                             </p>
                         </div>
                     </div>
@@ -120,20 +155,19 @@ const ChatComponent = ({ chatId, cvAnalysisId }) => {
                         {messages.map((msg, index) => (
                             <div
                                 key={index}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}
+                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-4 duration-500`}
                             >
-                                <div
-                                    className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''
-                                        }`}
-                                >
-                                    <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center mt-1 border ${msg.role === 'user' ? 'bg-orange-accent text-white border-orange-hover outline outline-2 outline-orange-accent/20' : isDarkMode ? 'bg-dark-card text-orange-accent border-dark-border shadow-md' : 'bg-light-bg text-orange-accent border-light-border'
+                                <div className={`flex gap-4 max-w-[90%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                    <div className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center mt-1 border ${msg.role === 'user'
+                                        ? 'bg-orange-accent text-white border-orange-hover outline outline-4 outline-orange-accent/10'
+                                        : isDarkMode ? 'bg-dark-card text-orange-accent border-dark-border shadow-md' : 'bg-light-bg text-orange-accent border-light-border'
                                         }`}>
-                                        {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                                        {msg.role === 'user' ? <User size={18} /> : <Wand2 size={18} />}
                                     </div>
                                     <div
-                                        className={`p-4 rounded-2xl text-[13px] font-medium leading-[1.6] transition-all ${msg.role === 'user'
-                                            ? 'bg-orange-accent text-white rounded-tr-none shadow-xl shadow-orange-accent/20'
-                                            : isDarkMode ? 'bg-dark-card/60 text-stone-200 rounded-tl-none border border-border/80 shadow-lg' : 'bg-light-bg text-light-text rounded-tl-none border border-light-border'
+                                        className={`p-5 rounded-[1.5rem] text-[13px] font-bold leading-[1.6] transition-all whitespace-pre-wrap ${msg.role === 'user'
+                                            ? 'bg-orange-accent text-white rounded-tr-none shadow-xl shadow-orange-accent/10'
+                                            : isDarkMode ? 'bg-dark-card border-l-4 border-l-orange-accent text-stone-200 rounded-tl-none border-y border-r border-[#2E2925] shadow-xl' : 'bg-stone-50 text-light-text rounded-tl-none border border-light-border'
                                             }`}
                                     >
                                         {msg.content}
@@ -141,24 +175,19 @@ const ChatComponent = ({ chatId, cvAnalysisId }) => {
                                 </div>
                             </div>
                         ))}
-                        {isLimitReached && (
-                            <div className="p-4 bg-orange-accent/5 border border-orange-accent/20 rounded-2xl text-center text-xs text-orange-accent font-black tracking-wide">
-                                HAS ALCANZADO EL LÍMITE DE CONSULTAS. ¡ES HORA DE ACTUAR!
-                            </div>
-                        )}
                     </>
                 )}
                 {sending && (
-                    <div className="flex justify-start">
-                        <div className="flex gap-3 max-w-[80%]">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mt-1 border ${isDarkMode ? 'bg-dark-card border-dark-border' : 'bg-light-bg border-light-border'}`}>
-                                <Bot size={16} className="text-orange-accent" />
+                    <div className="flex justify-start animate-pulse">
+                        <div className="flex gap-4 max-w-[80%]">
+                            <div className="w-9 h-9 rounded-xl bg-orange-accent/10 border border-orange-accent/20 flex items-center justify-center">
+                                <Loader2 size={18} className="text-orange-accent animate-spin" />
                             </div>
-                            <div className={`px-4 py-3 rounded-2xl text-sm rounded-tl-none border flex items-center gap-2 ${isDarkMode ? 'bg-dark-card/60 text-dark-text border-dark-border' : 'bg-light-bg text-light-text border-light-border'}`}>
-                                <div className="flex gap-1.5">
-                                    <div className="w-1.5 h-1.5 bg-orange-accent/60 rounded-full animate-bounce"></div>
-                                    <div className="w-1.5 h-1.5 bg-orange-accent/60 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                    <div className="w-1.5 h-1.5 bg-orange-accent/60 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                            <div className={`px-5 py-4 rounded-3xl rounded-tl-none border ${isDarkMode ? 'bg-dark-card border-dark-border' : 'bg-light-bg border-light-border'}`}>
+                                <div className="flex gap-2">
+                                    <span className="w-1.5 h-1.5 bg-orange-accent/40 rounded-full animate-bounce"></span>
+                                    <span className="w-1.5 h-1.5 bg-orange-accent/40 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                                    <span className="w-1.5 h-1.5 bg-orange-accent/40 rounded-full animate-bounce [animation-delay:0.4s]"></span>
                                 </div>
                             </div>
                         </div>
@@ -167,26 +196,44 @@ const ChatComponent = ({ chatId, cvAnalysisId }) => {
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <form onSubmit={handleSendMessage} className={`p-4 border-t transition-colors duration-300 ${isDarkMode ? 'border-dark-border bg-dark-card/30' : 'border-light-border bg-light-bg/30'}`}>
-                <div className="relative flex items-center gap-2">
+            {/* Actions & Input */}
+            <div className={`p-6 border-t ${isDarkMode ? 'border-dark-border bg-dark-card/20' : 'border-light-border bg-light-bg/20'} space-y-4`}>
+                {/* Suggestions */}
+                {chatId && !isLimitReached && !sending && messages.length > 0 && (
+                    <div className="flex flex-wrap gap-2 animate-in fade-in duration-700">
+                        {SUGGESTED_QUESTIONS.map((q, i) => (
+                            <button
+                                key={i}
+                                onClick={() => handleSuggestionClick(q)}
+                                className={`text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-full border transition-all hover:scale-105 active:scale-95 ${isDarkMode ? 'bg-dark-card border-dark-border text-dark-muted hover:border-orange-accent hover:text-orange-accent'
+                                        : 'bg-white border-light-border text-light-muted hover:border-orange-accent hover:text-orange-accent'
+                                    }`}
+                            >
+                                {q}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                <form onSubmit={handleSendMessage} className="relative group">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={!chatId ? "Analiza un archivo para chatear..." : isLimitReached ? "Límite de consultas alcanzado" : "Escribe tu duda aquí..."}
-                        className={`input-field pr-12 h-12 disabled:opacity-50 disabled:cursor-not-allowed ${!isDarkMode ? 'bg-white text-light-text border-light-border' : ''}`}
+                        placeholder={!chatId ? "Analiza tu perfil para habilitar el chat..." : isLimitReached ? "HAS LLEGADO AL LÍMITE DE CONSULTAS" : "ESCRIBE TU DUDA AQUÍ..."}
+                        className={`input-field pr-14 h-14 text-xs font-bold uppercase tracking-widest rounded-2xl border-2 transition-all shadow-lg ${!isDarkMode ? 'bg-white' : 'bg-[#12100E] border-stone-800 focus:border-orange-accent/50'
+                            } disabled:opacity-40 disabled:cursor-not-allowed`}
                         disabled={sending || !chatId || isLimitReached}
                     />
                     <button
                         type="submit"
                         disabled={!input.trim() || sending || !chatId || isLimitReached}
-                        className="absolute right-2 p-2 text-orange-accent hover:bg-orange-accent/10 rounded-lg transition-all disabled:opacity-50 disabled:scale-90"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 bg-orange-accent text-white rounded-xl hover:bg-orange-hover hover:scale-110 active:scale-95 transition-all disabled:opacity-50 disabled:bg-stone-700"
                     >
-                        <Send size={20} />
+                        <Send size={18} />
                     </button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     );
 };
