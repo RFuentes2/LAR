@@ -38,6 +38,7 @@ const normalizeOrigin = (value = '') => value.trim().replace(/\/+$/, '');
 
 const configuredOrigins = (
     process.env.CORS_ORIGINS ||
+    process.env.CORS_ORIGIN ||
     process.env.FRONTEND_URLS ||
     process.env.FRONTEND_URL ||
     'http://localhost:3000'

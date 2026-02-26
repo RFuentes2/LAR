@@ -86,7 +86,6 @@ const LoginPage = () => {
                                 theme={isDarkMode ? "filled_black" : "outline"}
                                 shape="pill"
                                 text="continue_with"
-                                width="100%"
                             />
                         </div>
 
