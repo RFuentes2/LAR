@@ -51,11 +51,18 @@ const allowedOrigins = Array.from(new Set(configuredOrigins.map(normalizeOrigin)
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Allow server-to-server calls or tools like curl/postman without Origin
+        // Allow server-to-server or tools
         if (!origin) return callback(null, true);
+
         const requestOrigin = normalizeOrigin(origin);
-        if (allowedOrigins.includes(requestOrigin)) return callback(null, true);
-        return callback(new Error(`CORS blocked for origin: ${origin}`));
+
+        // If wildcard is set or origin matches
+        if (allowedOrigins.includes('*') || allowedOrigins.includes(requestOrigin)) {
+            return callback(null, true);
+        }
+
+        console.warn(`⚠️ CORS blocked for: ${origin}. Allowed: ${allowedOrigins.join(', ')}`);
+        return callback(null, false); // Reject without throwing hard error
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
