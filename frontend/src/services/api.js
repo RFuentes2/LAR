@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 // Use relative path to leverage Nginx proxy in production
 // This avoids hardcoding random Google Cloud URLs
 const API_URL = '/api';
