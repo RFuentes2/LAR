@@ -28,8 +28,8 @@ RUN echo 'server { \
     root /usr/share/nginx/html; \
     try_files $uri $uri/ /index.html; \
     } \
-    location /api/ { \
-    proxy_pass ${BACKEND_URL}/; \
+    location /api { \
+    proxy_pass ${BACKEND_URL}; \
     proxy_http_version 1.1; \
     proxy_set_header Upgrade $http_upgrade; \
     proxy_set_header Connection "upgrade"; \
