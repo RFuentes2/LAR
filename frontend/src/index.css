@@ -9,8 +9,8 @@
     --muted-rgb: 100 116 139;
     --card-rgb: 255 255 255;
     --border-rgb: 226 232 240;
-    --accent-rgb: 255 107 53;
-    --accent-hover-rgb: 232 90 42;
+    --accent-rgb: 240 90 40;
+    --accent-hover-rgb: 210 70 30;
 }
 
 .dark {
@@ -20,8 +20,8 @@
     --muted-rgb: 156 163 175;
     --card-rgb: 28 25 23;
     --border-rgb: 46 41 37;
-    --accent-rgb: 255 107 53;
-    --accent-hover-rgb: 232 90 42;
+    --accent-rgb: 240 90 40;
+    --accent-hover-rgb: 210 70 30;
 }
 
 @layer base {
@@ -30,42 +30,64 @@
         color: rgb(var(--text-rgb));
         @apply selection:bg-orange-accent selection:text-white transition-colors duration-300 min-h-screen;
         font-family: 'Inter', sans-serif;
+        font-weight: 300;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    .font-title {
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        letter-spacing: -0.01em;
     }
 }
 
+.stepper-line {
+    background: #FFFFFF;
+    opacity: 0.4;
+}
+
 @layer components {
+    .sidebar-transition {
+        @apply transition-all duration-500 ease-in-out;
+        will-change: width, transform, opacity;
+    }
+
     .btn-primary {
         @apply bg-orange-accent hover:bg-orange-hover text-white font-bold py-3 px-6 rounded-full transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.05] active:scale-[0.95] flex items-center justify-center gap-2;
         box-shadow: 0 10px 15px -3px rgba(var(--accent-rgb) / 0.2), 0 4px 6px -4px rgba(var(--accent-rgb) / 0.2);
+        will-change: transform;
     }
 
     .btn-secondary {
         @apply bg-dark-card border border-dark-border text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-[1.05] active:scale-[0.95] flex items-center justify-center gap-2;
+        will-change: transform;
     }
 
     .card {
         background-color: rgb(var(--card-rgb));
         border: 1px solid rgb(var(--border-rgb));
         @apply rounded-2xl shadow-2xl p-6 transition-all duration-300;
+        will-change: transform, opacity;
     }
 
     .card-premium,
     .card-premium-left {
-        background: #121212;
-        border: 1px solid rgba(255, 107, 53, 0.12);
+        background: #0D0D0D;
+        border: 1px solid rgba(240, 90, 40, 0.15);
         @apply rounded-[2rem] shadow-2xl p-6 transition-all duration-300 relative overflow-hidden;
     }
 
     .card-premium {
-        background: radial-gradient(circle at bottom right, rgba(255, 107, 53, 0.08) 0%, rgba(18, 18, 18, 0) 60%),
-            radial-gradient(circle at 15% 15%, rgba(255, 107, 53, 0.03) 0%, rgba(18, 18, 18, 0) 40%),
-            #121212;
+        background: #0D0D0D;
     }
 
     .card-premium-left {
-        background: radial-gradient(circle at bottom left, rgba(255, 107, 53, 0.08) 0%, rgba(18, 18, 18, 0) 60%),
-            radial-gradient(circle at 85% 15%, rgba(255, 107, 53, 0.03) 0%, rgba(18, 18, 18, 0) 40%),
-            #121212;
+        background: #0D0D0D;
     }
 
     .card-premium::before {

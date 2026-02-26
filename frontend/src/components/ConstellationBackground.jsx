@@ -66,7 +66,8 @@ const ConstellationBackground = ({ theme = 'dark' }) => {
 
         const init = () => {
             particles = [];
-            const particleCount = Math.floor((canvas.width * canvas.height) / 9000);
+            // Optimization: Lower particle density for better performance
+            const particleCount = Math.floor((canvas.width * canvas.height) / 15000);
             for (let i = 0; i < particleCount; i++) {
                 particles.push(new Particle());
             }
@@ -74,16 +75,17 @@ const ConstellationBackground = ({ theme = 'dark' }) => {
 
         const connect = () => {
             for (let a = 0; a < particles.length; a++) {
-                for (let b = a; b < particles.length; b++) {
+                for (let b = a + 1; b < particles.length; b++) {
                     const dx = particles[a].x - particles[b].x;
                     const dy = particles[a].y - particles[b].y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const distance = dx * dx + dy * dy; // Use squared distance to avoid Math.sqrt
 
-                    if (distance < 150) {
+                    if (distance < 150 * 150) {
                         ctx.beginPath();
+                        const opacity = 1 - Math.sqrt(distance) / 150;
                         ctx.strokeStyle = theme === 'dark'
-                            ? `rgba(255, 107, 53, ${1 - distance / 150})`
-                            : `rgba(84, 165, 123, ${0.5 * (1 - distance / 150)})`;
+                            ? `rgba(255, 107, 53, ${opacity * 0.5})`
+                            : `rgba(84, 165, 123, ${opacity * 0.2})`;
                         ctx.lineWidth = 0.5;
                         ctx.moveTo(particles[a].x, particles[a].y);
                         ctx.lineTo(particles[b].x, particles[b].y);
@@ -104,10 +106,14 @@ const ConstellationBackground = ({ theme = 'dark' }) => {
         };
 
         window.addEventListener('resize', resize);
-        window.addEventListener('mousemove', (e) => {
-            mouse.x = e.x;
-            mouse.y = e.y;
-        });
+
+        // Use debouncing for mousemove if needed, but for now let's just keep it simple
+        const handleMouseMove = (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseout', () => {
             mouse.x = null;
             mouse.y = null;
@@ -118,6 +124,7 @@ const ConstellationBackground = ({ theme = 'dark' }) => {
 
         return () => {
             window.removeEventListener('resize', resize);
+            window.removeEventListener('mousemove', handleMouseMove);
             cancelAnimationFrame(animationFrameId);
         };
     }, [theme]);
@@ -125,8 +132,11 @@ const ConstellationBackground = ({ theme = 'dark' }) => {
     return (
         <canvas
             ref={canvasRef}
-            className="fixed inset-0 pointer-events-none z-0"
-            style={{ opacity: theme === 'dark' ? 0.6 : 0.3 }}
+            className="fixed inset-0 pointer-events-none z-0 transform-gpu"
+            style={{
+                opacity: theme === 'dark' ? 0.6 : 0.3,
+                willChange: 'opacity'
+            }}
         />
     );
 };
