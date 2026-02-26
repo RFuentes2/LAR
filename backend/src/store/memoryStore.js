@@ -18,12 +18,14 @@ const db = {
 
 // ─── Password Helpers (using native crypto, no bcrypt needed) ─────────────────
 const hashPassword = (password) => {
+    if (!password) return null;
     const salt = crypto.randomBytes(16).toString('hex');
     const hash = crypto.scryptSync(password, salt, 64).toString('hex');
     return `${salt}:${hash}`;
 };
 
 const comparePassword = (password, stored) => {
+    if (!stored || !password) return false;
     const [salt, hash] = stored.split(':');
     const inputHash = crypto.scryptSync(password, salt, 64).toString('hex');
     return inputHash === hash;
@@ -32,6 +34,7 @@ const comparePassword = (password, stored) => {
 // ─── User Operations ──────────────────────────────────────────────────────────
 const users = {
     findByEmail: (email) => {
+        if (!email) return null;
         for (const user of db.users.values()) {
             if (user.email === email.toLowerCase()) return user;
         }
@@ -40,7 +43,8 @@ const users = {
 
     findById: (id) => db.users.get(id) || null,
 
-    create: ({ name, email, password }) => {
+    create: (userData) => {
+        const { name, email, password } = userData;
         if (users.findByEmail(email)) {
             throw new Error('DUPLICATE_EMAIL');
         }
@@ -48,15 +52,19 @@ const users = {
             id: uuidv4(),
             name: name.trim(),
             email: email.toLowerCase().trim(),
-            password: hashPassword(password),
+            password: password ? hashPassword(password) : null,
             role: 'user',
             isActive: true,
+            avatar: userData.avatar || null,
+            googleId: userData.googleId || null,
+            isGoogleAccount: userData.isGoogleAccount || false,
             cvAnalysisId: null,
             linkedinUrl: null,
             recommendedSpecialization: null,
             lastLogin: null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            ...userData, // allow any extra fields
         };
         db.users.set(user.id, user);
         return user;
@@ -70,7 +78,10 @@ const users = {
         return updated;
     },
 
-    verifyPassword: (user, password) => comparePassword(password, user.password),
+    verifyPassword: (user, password) => {
+        if (user.isGoogleAccount && !user.password) return false;
+        return comparePassword(password, user.password);
+    },
 
     // Return user without password
     safe: (user) => {

@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Mail, Lock, Loader2, Sparkles, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import ConstellationBackground from '../components/ConstellationBackground';
 
 const LoginPage = () => {
-    const { login } = useAuth();
+    const { login, googleLogin } = useAuth();
     const { isDarkMode } = useTheme();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
@@ -19,17 +20,38 @@ const LoginPage = () => {
         setLoading(true);
         setError('');
         try {
-            const success = await login(email, password);
-            if (success) {
+            const result = await login(email, password);
+            if (result.success) {
                 navigate('/');
             } else {
-                setError('Credenciales inválidas');
+                setError(result.message || 'Credenciales inválidas');
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Error al iniciar sesión');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse) => {
+        setLoading(true);
+        setError('');
+        try {
+            const result = await googleLogin(credentialResponse.credential);
+            if (result.success) {
+                navigate('/');
+            } else {
+                setError(result.message || 'Error al autenticar con Google');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error al conectar con el servidor');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleError = () => {
+        setError('Error al iniciar sesión con Google');
     };
 
     return (
@@ -53,8 +75,27 @@ const LoginPage = () => {
                     </p>
                 </div>
 
-                <div className={`card ${isDarkMode ? 'bg-[#1C1917]/80 border-[#2E2925]' : 'bg-white border-[#E2E8F0]'} backdrop-blur-xl shadow-2xl`}>
+                <div className={`card ${isDarkMode ? 'bg-[#1C1917]/80 border-[#2E2925]' : 'bg-white border-[#E2E8F0]'} backdrop-blur-xl shadow-2xl p-8 rounded-3xl`}>
                     <h2 className={`text-xl font-bold mb-6 text-center ${isDarkMode ? 'text-white' : 'text-[#1A1A1A]'}`}>Bienvenido de nuevo</h2>
+
+                    <div className="flex flex-col gap-4 mb-6">
+                        <div className="flex justify-center">
+                            <GoogleLogin
+                                onSuccess={handleGoogleSuccess}
+                                onError={handleGoogleError}
+                                theme={isDarkMode ? "filled_black" : "outline"}
+                                shape="pill"
+                                text="continue_with"
+                                width="100%"
+                            />
+                        </div>
+
+                        <div className="relative flex items-center py-2">
+                            <div className="flex-grow border-t border-stone-800"></div>
+                            <span className="flex-shrink mx-4 text-xs font-black uppercase tracking-widest text-stone-500">o correo</span>
+                            <div className="flex-grow border-t border-stone-800"></div>
+                        </div>
+                    </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
@@ -100,7 +141,7 @@ const LoginPage = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn-primary w-full group"
+                            className="btn-primary w-full group flex items-center justify-center gap-2"
                         >
                             {loading ? <Loader2 className="animate-spin" size={20} /> : (
                                 <>

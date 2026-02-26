@@ -5,6 +5,9 @@
 
 const { users } = require('../store/memoryStore');
 const { generateToken } = require('../middleware/auth.middleware');
+const { OAuth2Client } = require('google-auth-library');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 /**
  * POST /api/auth/register
@@ -20,7 +23,7 @@ const register = async (req, res, next) => {
             if (err.message === 'DUPLICATE_EMAIL') {
                 return res.status(409).json({
                     success: false,
-                    message: 'Ya existe una cuenta con ese email. Por favor inicia sesi\u00f3n.',
+                    message: 'Ya existe una cuenta con ese email. Por favor inicia sesión.',
                 });
             }
             throw err;
@@ -30,7 +33,7 @@ const register = async (req, res, next) => {
 
         res.status(201).json({
             success: true,
-            message: '\u00a1Cuenta creada exitosamente! Bienvenido a LAR University.',
+            message: '¡Cuenta creada exitosamente! Bienvenido a LAR University.',
             data: {
                 token,
                 user: users.safe(user),
@@ -77,6 +80,70 @@ const login = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * POST /api/auth/google
+ */
+const googleLogin = async (req, res, next) => {
+    try {
+        const { credential } = req.body;
+
+        if (!credential) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se proporcionaron credenciales de Google.',
+            });
+        }
+
+        const ticket = await client.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        const { email, name, picture, sub: googleId } = payload;
+
+        let user = users.findByEmail(email);
+
+        if (!user) {
+            // Create user if doesn't exist
+            user = users.create({
+                name,
+                email,
+                avatar: picture,
+                googleId,
+                isGoogleAccount: true,
+                password: `google_${googleId}`, // dummy password
+            });
+        } else {
+            // Update last login
+            users.update(user.id, {
+                lastLogin: new Date().toISOString(),
+                avatar: picture || user.avatar,
+                googleId: googleId || user.googleId,
+            });
+            user = users.findById(user.id);
+        }
+
+        const token = generateToken(user.id);
+
+        res.status(200).json({
+            success: true,
+            message: `¡Bienvenido, ${user.name}!`,
+            data: {
+                token,
+                user: users.safe(user),
+            },
+        });
+    } catch (error) {
+        console.error('Google Auth Error:', error);
+        res.status(401).json({
+            success: false,
+            message: 'Error de autenticación con Google.',
+        });
+    }
+};
+
 /**
  * GET /api/auth/me
  */
@@ -131,14 +198,14 @@ const changePassword = async (req, res, next) => {
         if (!users.verifyPassword(user, currentPassword)) {
             return res.status(401).json({
                 success: false,
-                message: 'La contrase\u00f1a actual es incorrecta.',
+                message: 'La contraseña actual es incorrecta.',
             });
         }
 
         if (!newPassword || newPassword.length < 6) {
             return res.status(400).json({
                 success: false,
-                message: 'La nueva contrase\u00f1a debe tener al menos 6 caracteres.',
+                message: 'La nueva contraseña debe tener al menos 6 caracteres.',
             });
         }
 
@@ -152,7 +219,7 @@ const changePassword = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            message: 'Contrase\u00f1a actualizada exitosamente.',
+            message: 'Contraseña actualizada exitosamente.',
             data: { token },
         });
     } catch (error) {
@@ -160,5 +227,4 @@ const changePassword = async (req, res, next) => {
     }
 };
 
-module.exports = { register, login, getMe, updateProfile, changePassword };
-
+module.exports = { register, login, getMe, updateProfile, changePassword, googleLogin };

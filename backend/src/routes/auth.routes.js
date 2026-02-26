@@ -2,6 +2,7 @@
  * Auth Routes
  * POST /api/auth/register
  * POST /api/auth/login
+ * POST /api/auth/google
  * GET  /api/auth/me
  * PUT  /api/auth/update-profile
  * PUT  /api/auth/change-password
@@ -14,6 +15,7 @@ const router = express.Router();
 const {
     register,
     login,
+    googleLogin,
     getMe,
     updateProfile,
     changePassword,
@@ -29,11 +31,11 @@ const registerValidation = [
     body('email')
         .trim()
         .notEmpty().withMessage('El email es requerido')
-        .isEmail().withMessage('Por favor ingresa un email v\u00e1lido')
+        .isEmail().withMessage('Por favor ingresa un email válido')
         .normalizeEmail(),
     body('password')
-        .notEmpty().withMessage('La contrase\u00f1a es requerida')
-        .isLength({ min: 6 }).withMessage('La contrase\u00f1a debe tener al menos 6 caracteres'),
+        .notEmpty().withMessage('La contraseña es requerida')
+        .isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
 ];
 
 const loginValidation = [
@@ -43,8 +45,8 @@ const loginValidation = [
         .custom((value) => value.includes('@')).withMessage('El email debe contener @')
         .normalizeEmail(),
     body('password')
-        .notEmpty().withMessage('La contrase\u00f1a es requerida')
-        .isLength({ min: 6 }).withMessage('La contrase\u00f1a debe tener al menos 6 caracteres'),
+        .notEmpty().withMessage('La contraseña es requerida')
+        .isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
 ];
 
 // Validation middleware
@@ -64,9 +66,9 @@ const validate = (req, res, next) => {
 // Routes
 router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
+router.post('/google', googleLogin); // Google Auth
 router.get('/me', protect, getMe);
 router.put('/update-profile', protect, updateProfile);
 router.put('/change-password', protect, changePassword);
 
 module.exports = router;
-
