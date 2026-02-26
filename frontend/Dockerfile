@@ -8,25 +8,32 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
-# Install envsubst for template processing
+# Set default env variables
+ENV PORT=8080
+ENV BACKEND_URL=https://backend-onboard-866351374703.europe-southwest1.run.app
+
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Create a shell script to replace the backend URL at runtime
+# Use the official Nginx image feature: it looks for .template files in /etc/nginx/templates/
+# and substitutes environment variables into /etc/nginx/conf.d/ at startup.
+RUN mkdir -p /etc/nginx/templates
 RUN echo 'server { \
-    listen 8080; \
+    listen ${PORT}; \
     location / { \
-        root /usr/share/nginx/html; \
-        try_files $uri $uri/ /index.html; \
+    root /usr/share/nginx/html; \
+    try_files $uri $uri/ /index.html; \
     } \
     location /api/ { \
-        proxy_pass ${BACKEND_URL}/; \
-        proxy_http_version 1.1; \
-        proxy_set_header Upgrade $http_upgrade; \
-        proxy_set_header Connection "upgrade"; \
-        proxy_set_header Host $host; \
-        proxy_cache_bypass $http_upgrade; \
+    proxy_pass ${BACKEND_URL}/; \
+    proxy_http_version 1.1; \
+    proxy_set_header Upgrade $http_upgrade; \
+    proxy_set_header Connection "upgrade"; \
+    proxy_set_header Host $host; \
+    proxy_cache_bypass $http_upgrade; \
     } \
-}' > /etc/nginx/conf.d/default.conf.template
+    }' > /etc/nginx/templates/default.conf.template
 
-# Inject BACKEND_URL into Nginx config before starting
-CMD ["/bin/sh", "-c", "envsubst '${BACKEND_URL}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+EXPOSE 8080
+
+# The standard Nginx entrypoint will automatically handle the template substitution
+CMD ["nginx", "-g", "daemon off;"]
