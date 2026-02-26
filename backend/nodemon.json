@@ -1,0 +1,14 @@
+{
+    "ignore": [
+        "uploads/*",
+        "test_*",
+        "*.test.js",
+        "debug-*"
+    ],
+    "watch": [
+        "src",
+        "server.js",
+        ".env"
+    ],
+    "ext": "js,json"
+}
