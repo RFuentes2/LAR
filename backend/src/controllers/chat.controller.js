@@ -1,9 +1,9 @@
 /**
  * Chat Controller
- * Uses in-memory store (no DB). TODO: migrate to PostgreSQL.
+ * Uses Firestore (via Store Index).
  */
 
-const { chats, analyses } = require('../store/memoryStore');
+const { chats, analyses } = require('../store');
 const { generateChatResponse } = require('../services/openai.service');
 
 /**
@@ -14,7 +14,7 @@ const getUserChats = async (req, res, next) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
 
-        const { items, total } = chats.findByUserId(req.user.id, { page, limit });
+        const { items, total } = await chats.findByUserId(req.user.id, { page, limit });
 
         res.status(200).json({
             success: true,
@@ -40,7 +40,7 @@ const createChat = async (req, res, next) => {
     try {
         const { title, cvAnalysisId } = req.body;
 
-        const chat = chats.create({
+        const chat = await chats.create({
             userId: req.user.id,
             title: title || 'Nueva conversación',
             cvAnalysisId: cvAnalysisId || null,
@@ -61,7 +61,7 @@ const createChat = async (req, res, next) => {
  */
 const getChatById = async (req, res, next) => {
     try {
-        const chat = chats.findByIdAndUser(req.params.chatId, req.user.id);
+        const chat = await chats.findByIdAndUser(req.params.chatId, req.user.id);
 
         if (!chat) {
             return res.status(404).json({
@@ -94,7 +94,7 @@ const sendMessage = async (req, res, next) => {
             });
         }
 
-        const chat = chats.findByIdAndUser(chatId, req.user.id);
+        const chat = await chats.findByIdAndUser(chatId, req.user.id);
         if (!chat) {
             return res.status(404).json({
                 success: false,
@@ -108,7 +108,7 @@ const sendMessage = async (req, res, next) => {
         const analysisId = cvAnalysisId || chat.cvAnalysisId;
 
         if (analysisId) {
-            const analysis = analyses.findById(analysisId);
+            const analysis = await analyses.findById(analysisId);
             if (analysis && analysis.status === 'completed') {
                 userProfile = analysis.extractedProfile;
                 recommendation = analysis.recommendation;
@@ -116,16 +116,18 @@ const sendMessage = async (req, res, next) => {
         }
 
         // Add user message
-        const userMsg = chats.addMessage(chatId, {
+        const userMsg = await chats.addMessage(chatId, {
             role: 'user',
             content: content.trim(),
             metadata: { type: 'text' },
         });
 
+        // Get fresh chat state for OpenAI
+        const freshChat = await chats.findById(chatId);
+
         // Auto-title from first message
-        const freshChat = chats.findById(chatId);
         if (!freshChat.titleGenerated && freshChat.messages.length === 1) {
-            chats.update(chatId, {
+            await chats.update(chatId, {
                 title: content.substring(0, 60) + (content.length > 60 ? '...' : ''),
                 titleGenerated: true,
             });
@@ -133,7 +135,7 @@ const sendMessage = async (req, res, next) => {
 
         // Update cvAnalysisId on chat if provided
         if (cvAnalysisId && !freshChat.cvAnalysisId) {
-            chats.update(chatId, { cvAnalysisId });
+            await chats.update(chatId, { cvAnalysisId });
         }
 
         // Build recent message history for OpenAI (last 20)
@@ -141,14 +143,12 @@ const sendMessage = async (req, res, next) => {
             role: m.role,
             content: m.content,
         }));
-        // Include the new user message
-        recentMessages.push({ role: 'user', content: content.trim() });
 
         // Generate AI response
         const aiContent = await generateChatResponse(recentMessages, userProfile, recommendation);
 
         // Add assistant message
-        const assistantMsg = chats.addMessage(chatId, {
+        const assistantMsg = await chats.addMessage(chatId, {
             role: 'assistant',
             content: aiContent,
             metadata: { type: 'text' },
@@ -172,7 +172,7 @@ const sendMessage = async (req, res, next) => {
  */
 const deleteChat = async (req, res, next) => {
     try {
-        const deleted = chats.softDelete(req.params.chatId, req.user.id);
+        const deleted = await chats.softDelete(req.params.chatId, req.user.id);
 
         if (!deleted) {
             return res.status(404).json({
@@ -197,7 +197,7 @@ const updateChatTitle = async (req, res, next) => {
     try {
         const { title } = req.body;
 
-        const chat = chats.findByIdAndUser(req.params.chatId, req.user.id);
+        const chat = await chats.findByIdAndUser(req.params.chatId, req.user.id);
         if (!chat) {
             return res.status(404).json({
                 success: false,
@@ -205,7 +205,7 @@ const updateChatTitle = async (req, res, next) => {
             });
         }
 
-        const updated = chats.update(req.params.chatId, { title });
+        const updated = await chats.update(req.params.chatId, { title });
 
         res.status(200).json({
             success: true,

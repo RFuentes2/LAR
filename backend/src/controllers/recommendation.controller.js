@@ -1,9 +1,9 @@
 /**
  * Recommendation Controller
- * Uses in-memory store (no DB). TODO: migrate to PostgreSQL.
+ * Uses Firestore (via Store Index).
  */
 
-const { analyses } = require('../store/memoryStore');
+const { analyses } = require('../store');
 const { getAllSpecializations, getSpecializationById } = require('../utils/specializations');
 const { generateRecommendation } = require('../services/openai.service');
 
@@ -50,7 +50,7 @@ const getSpecializationByIdHandler = async (req, res, next) => {
  */
 const getMyRecommendation = async (req, res, next) => {
     try {
-        const analysis = analyses.findLatestCompleted(req.user.id);
+        const analysis = await analyses.findLatestCompleted(req.user.id);
 
         if (!analysis) {
             return res.status(404).json({
@@ -93,7 +93,7 @@ const regenerateRecommendation = async (req, res, next) => {
     try {
         const { cvAnalysisId } = req.body;
 
-        const analysis = analyses.findById(cvAnalysisId);
+        const analysis = await analyses.findById(cvAnalysisId);
 
         if (!analysis || analysis.userId !== req.user.id) {
             return res.status(404).json({
@@ -114,7 +114,7 @@ const regenerateRecommendation = async (req, res, next) => {
             analysis.sourceType
         );
 
-        analyses.update(cvAnalysisId, {
+        await analyses.update(cvAnalysisId, {
             recommendation: {
                 primarySpecialization: recommendation.specialization?.name || recommendation.primarySpecialization,
                 secondarySpecializations: recommendation.secondarySpecializations || [],

@@ -1,11 +1,11 @@
 /**
  * Authentication Middleware
- * JWT token verification using in-memory store.
- * TODO: migrate to PostgreSQL.
+ * JWT token verification using Firestore/In-memory store via Store Index.
  */
 
 const jwt = require('jsonwebtoken');
-const { users } = require('../store/memoryStore');
+const { users } = require('../store');
+
 const FALLBACK_JWT_SECRET = 'dev-only-fallback-secret-change-in-prod';
 let warnedAboutFallbackSecret = false;
 
@@ -25,7 +25,7 @@ const getJwtSecret = () => {
 /**
  * Protect routes - verify JWT token
  */
-const protect = (req, res, next) => {
+const protect = async (req, res, next) => {
     try {
         let token;
 
@@ -45,7 +45,7 @@ const protect = (req, res, next) => {
 
         const decoded = jwt.verify(token, getJwtSecret());
 
-        const user = users.findById(decoded.id);
+        const user = await users.findById(decoded.id);
 
         if (!user) {
             return res.status(401).json({
@@ -105,4 +105,4 @@ const generateToken = (userId) => {
     });
 };
 
-module.exports = { protect, restrictTo, generateToken };
+module.exports = { protect, restrictTo, generateToken, getJwtSecret };

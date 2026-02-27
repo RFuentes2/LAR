@@ -1,9 +1,6 @@
 ﻿/**
  * LAR University - Main Server Entry Point
  * AI-powered specialization recommender
- * 
- * Storage: In-memory (no DB yet)
- * TODO: Connect PostgreSQL when ready
  */
 
 require('dotenv').config();
@@ -26,14 +23,14 @@ const app = express();
 const PORT = Number(process.env.PORT) || 8080;
 const HOST = '0.0.0.0';
 
-// â”€â”€â”€ Security Middleware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Security Middleware ─────────────────────────────────────────────────────────
 app.use(
     helmet({
         crossOriginResourcePolicy: { policy: 'cross-origin' },
     })
 );
 
-// â”€â”€â”€ CORS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── CORS ────────────────────────────────────────────────────────────────────────
 const normalizeOrigin = (value = '') => value.trim().replace(/\/+$/, '');
 
 const configuredOrigins = (
@@ -71,59 +68,59 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// â”€â”€â”€ Rate Limiting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Rate Limiting ──────────────────────────────────────────────────────────────
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
     message: {
         success: false,
-        message: 'Demasiadas solicitudes, por favor intenta mÃ¡s tarde.',
+        message: 'Demasiadas solicitudes, por favor intenta más tarde.',
     },
     standardHeaders: true,
     legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
-// â”€â”€â”€ Body Parsers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Body Parsers ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// â”€â”€â”€ Static Files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Static Files ───────────────────────────────────────────────────────────────
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// â”€â”€â”€ Health Check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Health Check ───────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
     res.status(200).json({
         success: true,
-        message: 'LAR University API is running ðŸš€',
+        message: 'LAR University API is running 🚀',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development',
-        storage: 'in-memory (PostgreSQL pending)',
+        storage: process.env.USE_FIRESTORE === 'true' ? 'Firestore' : 'In-Memory',
     });
 });
 
-// â”€â”€â”€ API Routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── API Routes ──────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/cv', cvRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 
-// â”€â”€â”€ Error Handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Error Handling ──────────────────────────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);
 
-// â”€â”€â”€ Start Server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Start Server ───────────────────────────────────────────────────────────────
 app.listen(PORT, HOST, () => {
+    const storageMsg = process.env.USE_FIRESTORE === 'true' ? 'Firestore (Google Cloud)' : 'In-Memory (no DB yet)';
     console.log(`
-  â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
-  â•‘     LAR University Backend Server        â•‘
-  â•‘     Port    : ${PORT}                       â•‘
-  â•‘     Mode    : ${(process.env.NODE_ENV || 'development').padEnd(12)}          â•‘
-  â•‘     Storage : In-Memory (no DB yet)      â•‘
-  â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  ╔═════════════════════════════════════════╗
+  ║     LAR University Backend Server        ║
+  ║     Port    : ${PORT}                       ║
+  ║     Mode    : ${(process.env.NODE_ENV || 'development').padEnd(12)}          ║
+  ║     Storage : ${storageMsg.padEnd(25)} ║
+  ╚═════════════════════════════════════════╝
   `);
 });
 
 module.exports = app;
-
