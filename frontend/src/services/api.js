@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// Use relative path to leverage Nginx proxy in production
-// This avoids hardcoding random Google Cloud URLs
-const API_URL = '/api';
+// Prefer explicit env URL when provided; fallback to local proxy path.
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
     baseURL: API_URL,
