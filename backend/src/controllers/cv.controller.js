@@ -1,9 +1,9 @@
 /**
  * CV Controller
- * Uses in-memory store (no DB). TODO: migrate to PostgreSQL.
+ * Uses Firestore (via Store Index).
  */
 
-const { analyses, users } = require('../store/memoryStore');
+const { analyses, users } = require('../store');
 const { extractTextFromFile } = require('../services/pdf.service');
 const { extractProfileFromCV, generateRecommendation } = require('../services/openai.service');
 
@@ -23,7 +23,7 @@ const uploadCV = async (req, res, next) => {
         const filename = req.file.originalname;
 
         // Create analysis record
-        const analysis = analyses.create({
+        const analysis = await analyses.create({
             userId: req.user.id,
             sourceType: filename.toLowerCase().endsWith('.csv') ? 'csv' : 'pdf',
             file: {
@@ -35,7 +35,7 @@ const uploadCV = async (req, res, next) => {
             },
         });
 
-        analyses.update(analysis.id, { status: 'processing' });
+        await analyses.update(analysis.id, { status: 'processing' });
 
         // Extract text from file
         console.log(`📄 Extracting text from file: ${filename}`);
@@ -43,7 +43,7 @@ const uploadCV = async (req, res, next) => {
         try {
             extractResult = await extractTextFromFile(filePath, filename);
         } catch (err) {
-            analyses.update(analysis.id, {
+            await analyses.update(analysis.id, {
                 status: 'failed',
                 errorMessage: err.message,
             });
@@ -56,7 +56,7 @@ const uploadCV = async (req, res, next) => {
         const { text } = extractResult;
 
         if (!text || text.length < 50) {
-            analyses.update(analysis.id, {
+            await analyses.update(analysis.id, {
                 status: 'failed',
                 errorMessage: 'No se pudo extraer suficiente contenido del archivo.',
             });
@@ -73,7 +73,7 @@ const uploadCV = async (req, res, next) => {
             extractedProfile = await extractProfileFromCV(text);
         } catch (aiErr) {
             console.error('❌ OpenAI Extraction Error:', aiErr.message);
-            analyses.update(analysis.id, { status: 'failed', errorMessage: 'Error al extraer perfil con IA' });
+            await analyses.update(analysis.id, { status: 'failed', errorMessage: 'Error al extraer perfil con IA' });
             return res.status(502).json({ success: false, message: 'La IA no pudo procesar el contenido del archivo. Intenta con un archivo más claro.' });
         }
 
@@ -83,12 +83,12 @@ const uploadCV = async (req, res, next) => {
             recommendation = await generateRecommendation(extractedProfile, analysis.sourceType);
         } catch (aiErr) {
             console.error('❌ OpenAI Recommendation Error:', aiErr.message);
-            analyses.update(analysis.id, { status: 'failed', errorMessage: 'Error al generar recomendación' });
+            await analyses.update(analysis.id, { status: 'failed', errorMessage: 'Error al generar recomendación' });
             return res.status(502).json({ success: false, message: 'Hubo un error al generar tu recomendación personalizada.' });
         }
 
         // Save results safely
-        const updated = analyses.update(analysis.id, {
+        const updated = await analyses.update(analysis.id, {
             rawText: text.substring(0, 5000),
             extractedProfile,
             recommendation: {
@@ -104,7 +104,7 @@ const uploadCV = async (req, res, next) => {
         });
 
         // Update user reference
-        users.update(req.user.id, {
+        await users.update(req.user.id, {
             cvAnalysisId: analysis.id,
             recommendedSpecialization: recommendation?.specialization?.name || recommendation?.primarySpecialization,
         });
@@ -139,19 +139,19 @@ const analyzeLinkedIn = async (req, res, next) => {
         }
 
         if (linkedinSummary && linkedinSummary.length > 50) {
-            const analysis = analyses.create({
+            const analysis = await analyses.create({
                 userId: req.user.id,
                 sourceType: 'linkedin',
                 linkedinUrl,
                 rawText: linkedinSummary,
             });
 
-            analyses.update(analysis.id, { status: 'processing' });
+            await analyses.update(analysis.id, { status: 'processing' });
 
             const extractedProfile = await extractProfileFromCV(linkedinSummary);
             const recommendation = await generateRecommendation(extractedProfile, 'linkedin');
 
-            const updated = analyses.update(analysis.id, {
+            const updated = await analyses.update(analysis.id, {
                 extractedProfile,
                 recommendation: {
                     primarySpecialization: recommendation.specialization?.name || recommendation.primarySpecialization,
@@ -165,7 +165,7 @@ const analyzeLinkedIn = async (req, res, next) => {
                 processedAt: new Date().toISOString(),
             });
 
-            users.update(req.user.id, {
+            await users.update(req.user.id, {
                 cvAnalysisId: analysis.id,
                 linkedinUrl,
                 recommendedSpecialization: recommendation.specialization?.name,
@@ -207,7 +207,7 @@ const analyzeLinkedIn = async (req, res, next) => {
  */
 const getMyAnalysis = async (req, res, next) => {
     try {
-        const analysis = analyses.findLatestCompleted(req.user.id);
+        const analysis = await analyses.findLatestCompleted(req.user.id);
 
         if (!analysis) {
             return res.status(404).json({
@@ -230,7 +230,8 @@ const getMyAnalysis = async (req, res, next) => {
  */
 const getAnalysisHistory = async (req, res, next) => {
     try {
-        const allAnalyses = analyses.findByUserId(req.user.id).map((a) => {
+        const userAnalyses = await analyses.findByUserId(req.user.id);
+        const allAnalyses = userAnalyses.map((a) => {
             const { rawText, ...rest } = a; // exclude raw text
             return rest;
         });

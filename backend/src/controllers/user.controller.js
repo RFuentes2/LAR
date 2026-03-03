@@ -1,19 +1,19 @@
 /**
  * User Controller
- * Uses in-memory store (no DB). TODO: migrate to PostgreSQL.
+ * Uses Firestore (via Store Index).
  */
 
-const { users, stats } = require('../store/memoryStore');
+const { users, stats } = require('../store');
 
 /**
  * GET /api/users/profile
  */
 const getProfile = async (req, res, next) => {
     try {
-        const user = users.findById(req.user.id);
+        const user = await users.findById(req.user.id);
 
-        const chatCount = stats.chatCountByUser(req.user.id);
-        const analysisCount = stats.analysisCountByUser(req.user.id);
+        const chatCount = await stats.chatCountByUser(req.user.id);
+        const analysisCount = await stats.analysisCountByUser(req.user.id);
 
         res.status(200).json({
             success: true,
@@ -32,7 +32,7 @@ const getProfile = async (req, res, next) => {
  */
 const deactivateAccount = async (req, res, next) => {
     try {
-        users.update(req.user.id, { isActive: false });
+        await users.update(req.user.id, { isActive: false });
 
         res.status(200).json({
             success: true,

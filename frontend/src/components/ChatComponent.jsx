@@ -127,7 +127,7 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
                     </div>
                 </div>
                 {chatId && (
-                    <div className={`text-[8px] uppercase tracking-widest font-black px-2.5 py-1 rounded-lg border ${isDarkMode ? 'bg-orange-accent/10 border-orange-accent/20 text-orange-accent' : 'bg-orange-accent/5 border-orange-accent/10 text-orange-accent'}`}>
+                    <div className={`text-[8px] uppercase tracking-widest font-black px-2.5 py-1 rounded-lg border ${isDarkMode ? 'bg-orange-accent/10 border-orange-accent/20 text-orange-accent' : 'bg-orange-accent/10 border-orange-accent/30 text-orange-accent'}`}>
                         Consultas: {userMessagesCount}/2
                     </div>
                 )}
@@ -139,16 +139,16 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
                     <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
                         <div className="relative">
                             <div className="absolute inset-0 bg-orange-accent blur-2xl opacity-5"></div>
-                            <div className="relative bg-orange-accent/10 p-6 rounded-2xl border border-orange-accent/10">
-                                <Sparkles className="text-orange-accent" size={40} />
+                            <div className="relative bg-orange-accent/10 p-8 rounded-[2rem] border border-orange-accent/20 shadow-[0_0_50px_rgba(240,90,40,0.1)]">
+                                <Sparkles className="text-orange-accent" size={48} />
                             </div>
                         </div>
-                        <div className="space-y-1">
-                            <h4 className={`text-base font-['Bebas_Neue'] tracking-tight italic uppercase ${isDarkMode ? 'text-white' : 'text-light-text'}`}>
+                        <div className="space-y-2 max-w-[280px] mx-auto">
+                            <h4 className={`text-[1.32rem] font-black tracking-tighter italic uppercase leading-none ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                                 SISTEMA LISTO PARA EL <span className="text-orange-accent">ANÁLISIS</span>
                             </h4>
-                            <p className={`text-[9px] font-black uppercase tracking-[0.2em] opacity-30`}>
-                                Selecciona un master y vincula tu CV para iniciar el despliegue técnico.
+                            <p className={`text-[10px] font-bold uppercase tracking-[0.1em] leading-relaxed ${isDarkMode ? 'text-white/60' : 'text-slate-600'}`}>
+                                Selecciona un máster y vincula tu CV para iniciar el <span className={`${isDarkMode ? 'text-white/90' : 'text-slate-900'}`}>despliegue técnico</span>.
                             </p>
                         </div>
                     </div>
@@ -169,7 +169,7 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
                                     <div
                                         className={`p-4 rounded-xl text-[12px] font-bold leading-[1.5] transition-all whitespace-pre-wrap ${msg.role === 'user'
                                             ? 'bg-orange-accent text-white rounded-tr-none'
-                                            : isDarkMode ? 'bg-dark-card border-l-2 border-l-orange-accent text-stone-300 rounded-tl-none border-y border-r border-[#2E2925] shadow-lg' : 'bg-stone-50 text-light-text rounded-tl-none border border-light-border shadow-sm'
+                                            : isDarkMode ? 'bg-dark-card border-l-2 border-l-orange-accent text-stone-300 rounded-tl-none border-y border-r border-[#2E2925] shadow-lg' : 'bg-slate-100/80 text-slate-800 rounded-tl-none border border-slate-200 shadow-sm'
                                             }`}
                                     >
                                         {msg.content}
@@ -223,7 +223,7 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder={!chatId ? "Completa el análisis..." : isLimitReached ? "Límite alcanzado" : "CONSULTAR..."}
-                        className={`input-field pr-12 h-11 text-[10px] font-black uppercase tracking-[0.1em] rounded-xl border transition-all ${!isDarkMode ? 'bg-white' : 'bg-[#12100E] border-stone-800 focus:border-orange-accent/30'
+                        className={`input-field pr-12 h-11 text-[10px] font-black uppercase tracking-[0.1em] rounded-xl border transition-all ${!isDarkMode ? 'bg-white text-slate-900 border-slate-200 placeholder:text-slate-400' : 'bg-[#12100E] border-stone-800 text-white placeholder:text-white focus:border-orange-accent/30'
                             } disabled:opacity-40 disabled:cursor-not-allowed`}
                         disabled={sending || !chatId || isLimitReached}
                     />

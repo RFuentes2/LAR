@@ -23,7 +23,7 @@ const SPRINTS = [
 
 const MOTIVATIONAL_PHRASES = [
     { text: "TU VOLUNTAD ES EL ÚNICO LÍMITE", color: "#F05A28", bg: "#1A1A1A" },
-    { text: "ESTRATEGIA, VISIÓN Y ACCIÓN", color: "#FFFFFF", bg: "#F05A28" },
+    { text: "ESTRATEGIA, VISIÓN Y ACCIÓN", color: "#fbdace", bg: "#F05A28" },
     { text: "EL ÉXITO ES UN HÁBITO", color: "#F05A28", bg: "#000000" }
 ];
 
@@ -229,15 +229,19 @@ const HomePage = () => {
 
             {/* 2. Main Workspace */}
             <div className="flex-1 flex flex-col min-w-0 transform-gpu overflow-y-auto overflow-x-hidden">
-                {/* 2a. Floating Trigger - Totalmente esquinado a la izquierda */}
-                {!isSidebarOpen && (
-                    <button
-                        onClick={() => setIsSidebarOpen(true)}
-                        className="fixed top-0 left-0 z-[100] w-12 h-12 rounded-br-2xl bg-orange-accent text-white shadow-2xl shadow-orange-accent/40 flex items-center justify-center hover:w-14 hover:h-14 transition-all animate-in fade-in slide-in-from-left-0 border-none m-0 p-0"
-                    >
-                        <Clock size={22} />
-                    </button>
-                )}
+
+
+                {/* 2a. Floating Trigger - Animated Hamburger */}
+                <button
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    className={`fixed top-0 left-0 z-[100] w-12 h-12 rounded-br-2xl bg-orange-accent text-white shadow-2xl shadow-orange-accent/40 flex flex-col items-center justify-center transition-all duration-300 ${isSidebarOpen ? 'w-14 h-14' : 'hover:w-14 hover:h-14'} border-none m-0 p-0`}
+                >
+                    <div className="flex flex-col gap-[4px]">
+                        <span className="hamburger-line line-1"></span>
+                        <span className="hamburger-line line-2"></span>
+                        <span className="hamburger-line line-3"></span>
+                    </div>
+                </button>
 
                 <div className="w-full space-y-8 py-6 px-4 sm:px-8 lg:px-12 animate-in fade-in duration-700">
                     {/* Stepper - 5% Larger + White High-Visibility Line */}
@@ -245,11 +249,11 @@ const HomePage = () => {
                         <div className="flex items-center justify-between relative px-2">
                             <div className="absolute top-1/2 left-0 w-full h-[4px] -translate-y-1/2 bg-white shadow-[0_0_15px_rgba(255,255,255,0.6)] z-0 rounded-full"></div>
                             {[1, 2, 3].map((s) => (
-                                <div key={s} className="relative z-10 flex flex-col items-center gap-2.5">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold transition-all border-2 ${currentStep >= s ? 'bg-orange-accent text-white border-orange-accent shadow-[0_0_15px_rgba(240,90,40,0.5)] scale-110' : 'bg-stone-900 border-white/10 text-stone-500'}`}>
-                                        {s === 1 ? <BookOpen size={14} /> : s === 2 ? <Upload size={14} /> : <Sparkles size={14} />}
+                                <div key={s} className="relative z-10 flex flex-col items-center gap-3">
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold transition-all border-2 ${currentStep >= s ? 'bg-orange-accent text-white border-orange-accent shadow-[0_0_15px_rgba(240,90,40,0.5)] scale-110' : 'bg-stone-900 border-white/10 text-stone-500'}`}>
+                                        {s === 1 ? <BookOpen size={16} /> : s === 2 ? <Upload size={16} /> : <Sparkles size={16} />}
                                     </div>
-                                    <span className={`text-[7px] font-bold tracking-[0.25em] transition-opacity uppercase ${currentStep === s ? 'opacity-100 text-orange-accent' : 'opacity-40 text-stone-400'}`}>
+                                    <span className={`text-[8px] font-bold tracking-[0.25em] transition-opacity uppercase ${currentStep === s ? 'opacity-100 text-orange-accent' : 'opacity-40 text-stone-400'}`}>
                                         {s === 1 ? 'MÁSTER' : s === 2 ? 'CV' : 'RUTA'}
                                     </span>
                                 </div>
@@ -284,9 +288,9 @@ const HomePage = () => {
                                     {!selectedMaster ? (
                                         <div className="space-y-6">
                                             {/* Solid Brand Color Rotator */}
-                                            <div className="flex justify-center h-10 transition-all duration-500">
+                                            <div className="flex justify-center h-10">
                                                 <div
-                                                    className="px-8 py-2 rounded-xl transition-all duration-700 flex items-center gap-4 shadow-2xl"
+                                                    className="px-8 py-2 rounded-xl flex items-center gap-4 shadow-2xl"
                                                     style={{
                                                         backgroundColor: MOTIVATIONAL_PHRASES[currentPhrase].bg === 'transparent' ? '#1A1A1A' : MOTIVATIONAL_PHRASES[currentPhrase].bg,
                                                         border: `1px solid ${MOTIVATIONAL_PHRASES[currentPhrase].color === '#F05A28' ? 'rgba(240, 90, 40, 0.4)' : 'rgba(255,255,255,0.1)'}`
@@ -294,7 +298,7 @@ const HomePage = () => {
                                                 >
                                                     <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: MOTIVATIONAL_PHRASES[currentPhrase].color }}></div>
                                                     <p
-                                                        className="text-[10px] font-bold tracking-[0.35em] uppercase transition-all duration-700"
+                                                        className="text-[10px] font-bold tracking-[0.35em] uppercase"
                                                         style={{ color: MOTIVATIONAL_PHRASES[currentPhrase].color }}
                                                     >
                                                         {MOTIVATIONAL_PHRASES[currentPhrase].text}
@@ -304,7 +308,7 @@ const HomePage = () => {
 
                                             <div className="flex items-center gap-5">
                                                 <div className="w-16 h-[2px] bg-orange-accent rounded-full shadow-[0_0_10px_rgba(240,90,40,0.3)]"></div>
-                                                <h2 className="text-4xl font-bold tracking-tighter uppercase leading-tight text-white">
+                                                <h2 className={`text-4xl font-bold tracking-tighter uppercase leading-tight ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
                                                     SELECCIONA TU <span className="text-orange-accent italic">MÁSTER</span>
                                                 </h2>
                                             </div>
@@ -314,12 +318,20 @@ const HomePage = () => {
                                                     <button
                                                         key={m.id}
                                                         onClick={() => setSelectedMaster(m.id)}
-                                                        className={`p-8 rounded-[2.5rem] border text-left transition-all duration-300 group relative overflow-hidden transform hover:-translate-y-1.5 bg-stone-900 border-white/5 hover:border-orange-accent/40 shadow-2xl`}
+                                                        className="p-8 rounded-[2.5rem] border text-left transition-all duration-300 group relative overflow-hidden transform hover:-translate-y-1.5 bg-stone-900 border-white/5 hover:border-orange-accent/40 shadow-2xl outline-none focus:outline-none focus:ring-0"
                                                     >
                                                         <div className="absolute top-0 right-0 w-36 h-36 blur-[70px] opacity-10 group-hover:opacity-30 transition-all" style={{ backgroundColor: m.color }}></div>
                                                         <div className="relative z-10 flex items-center justify-between">
                                                             <div className="flex items-center gap-6">
-                                                                <span className="text-5xl opacity-5 group-hover:opacity-40 transition-all font-bold italic" style={{ color: m.color }}>
+                                                                <span
+                                                                    className="text-5xl font-black italic transition-all duration-500"
+                                                                    style={{
+                                                                        color: m.color,
+                                                                        opacity: 0.45,
+                                                                        filter: `drop-shadow(0 0 15px ${m.color})`,
+                                                                        WebkitTextStroke: `1px ${m.color}`
+                                                                    }}
+                                                                >
                                                                     {String(idx + 1).padStart(2, '0')}
                                                                 </span>
                                                                 <div className="space-y-1.5">
@@ -336,7 +348,7 @@ const HomePage = () => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className={`p-10 rounded-[3rem] border transition-all duration-500 relative overflow-hidden bg-[#0D0D0D] border-white/10 shadow-3xl`}>
+                                        <div className="p-10 rounded-[3rem] border relative overflow-hidden bg-[#0D0D0D] border-white/10 shadow-3xl">
                                             <div className="flex items-center justify-between border-b border-white/10 pb-6 mb-8">
                                                 <button onClick={() => setSelectedMaster(null)} className="text-[10px] font-bold hover:text-orange-accent tracking-widest uppercase transition-all flex items-center gap-2 text-white/50">
                                                     ← VOLVER
@@ -358,7 +370,7 @@ const HomePage = () => {
                                                 </div>
 
                                                 <div className="w-full space-y-5">
-                                                    <label className={`flex items-center justify-center gap-4 w-full h-18 rounded-2xl border-2 font-bold text-[11px] tracking-widest transition-all cursor-pointer ${file ? 'border-orange-accent text-orange-accent bg-orange-accent/10' : 'border-white/5 bg-white/5 opacity-50 hover:opacity-100 text-white'}`}>
+                                                    <label className={`flex items-center justify-center gap-4 w-full h-18 rounded-2xl border-2 font-bold text-[11px] tracking-widest transition-all cursor-pointer ${file ? 'border-orange-accent text-orange-accent bg-orange-accent/10' : 'border-white/5 bg-stone-900/40 opacity-50 hover:opacity-100 text-white'}`}>
                                                         <FileText size={24} />
                                                         <span className="truncate max-w-[250px]">{file ? file.name : 'SELECCIONAR PDF'}</span>
                                                         <input id="cv-input" type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
@@ -375,8 +387,8 @@ const HomePage = () => {
                                     )}
                                 </div>
                             ) : (
-                                <div className="space-y-8 animate-in fade-in slide-in-from-right duration-500">
-                                    <div className={`p-5 rounded-[2rem] border bg-[#0D0D0D] border-white/10 shadow-xl`}>
+                                <div className="space-y-8">
+                                    <div className="p-5 rounded-[2rem] border bg-[#0D0D0D] border-white/10 shadow-xl">
                                         <div className="flex items-center gap-6">
                                             <div className="w-12 h-12 rounded-2xl bg-orange-accent flex items-center justify-center text-white shadow-lg shadow-orange-accent/30">
                                                 <CheckCircle size={28} />

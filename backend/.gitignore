@@ -8,6 +8,9 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+firebase-key.json
+fix-key.js
+test-*.js
 
 # IDE
 .vscode/

@@ -23,8 +23,8 @@ const Navbar = ({ onToggleSidebar }) => {
             ? 'bg-black/60 border-orange-accent/10'
             : 'bg-white/60 border-orange-accent/10'
             }`}>
-            <div className="w-full px-2 sm:px-4 lg:px-6">
-                <div className="flex items-center justify-between h-16">
+            <div className="w-full px-2 sm:px-4 lg:px-8">
+                <div className="flex items-center justify-between h-[4.1rem]">
                     <div className="flex items-center gap-6">
                         {/* Logo - Elite Navigation */}
                         <div
@@ -37,18 +37,18 @@ const Navbar = ({ onToggleSidebar }) => {
                                 }
                             }}
                         >
-                            <div className="w-8 h-8 rounded-lg bg-orange-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <svg viewBox="0 0 100 100" className="w-5 h-5">
+                            <div className="w-11 h-11 rounded-xl bg-orange-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <svg viewBox="0 0 100 100" className="w-7 h-7">
                                     <polygon points="50,20 15,80 85,80" fill="none" stroke="#F05A28" strokeWidth="12" />
                                     <rect x="42" y="4" width="8" height="8" fill="#F05A28" />
                                     <rect x="52" y="4" width="8" height="8" fill="#F05A28" />
                                 </svg>
                             </div>
                             <div className="flex flex-col">
-                                <span className={`text-base font-black tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-[#1A1A1A]'}`}>
+                                <span className={`text-[1.2rem] font-black tracking-tighter leading-none ${isDarkMode ? 'text-white' : 'text-[#1A1A1A]'}`}>
                                     LÄR <span className="text-orange-accent">UNIVERSITY</span>
                                 </span>
-                                <span className="text-[7px] uppercase tracking-[0.2em] text-orange-accent/50 font-black">
+                                <span className="text-[9px] uppercase tracking-[0.25em] text-orange-accent/50 font-black">
                                     ÉLITE TECH
                                 </span>
                             </div>

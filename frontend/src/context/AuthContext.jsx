@@ -39,6 +39,16 @@ export const AuthProvider = ({ children }) => {
         return response.data;
     };
 
+    const googleLogin = async (credential) => {
+        const response = await api.post('/auth/google', { credential });
+        if (response.data.success) {
+            const { token, user } = response.data.data;
+            localStorage.setItem('eduai_token', token);
+            setUser(user);
+        }
+        return response.data;
+    };
+
     const register = async (userData) => {
         const response = await api.post('/auth/register', userData);
         if (response.data.success) {
@@ -55,7 +65,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, googleLogin, register, logout }}>
             {children}
         </AuthContext.Provider>
     );
