@@ -1,37 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles, ArrowRight, BookOpen, Layers, Terminal, TrendingUp, ShieldCheck, Award, MessageSquare, Clock, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Sparkles, ArrowRight, BookOpen, MessageSquare, Clock, Plus, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import ChatComponent from '../components/ChatComponent';
-import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const MASTERS = [
-    { id: 'MINTEAR', name: 'MINTEAR', desc: 'Master in Intelligence', color: 'rgb(255, 107, 53)' },
-    { id: 'MTECMBA', name: 'MTECMBA', desc: 'Tech Management MBA', color: 'rgb(132, 193, 193)' },
-    { id: 'DATALAR-MBA', name: 'DATALAR-MBA', desc: 'Data Driven MBA', color: 'rgb(80, 165, 132)' }
+    { id: 'MINTEAR', name: 'MINTEAR', desc: 'Master in intelligence', color: 'rgb(255, 107, 53)' },
+    { id: 'MTECMBA', name: 'MTECMBA', desc: 'tech management mba', color: 'rgb(132, 193, 193)' },
+    { id: 'DATALAR-MBA', name: 'DATALAR-MBA', desc: 'data driven mba', color: 'rgb(80, 165, 132)' }
 ];
 
 const SPRINTS = [
-    { title: 'Fundamentos y Estrategia', icon: <BookOpen className="w-4 h-4" /> },
-    { title: 'Implementación Técnica', icon: <Terminal className="w-4 h-4" /> },
-    { title: 'Optimización y Escala', icon: <Layers className="w-4 h-4" /> },
-    { title: 'Liderazgo y Gestión', icon: <TrendingUp className="w-4 h-4" /> },
-    { title: 'Innovación Disruptiva', icon: <ShieldCheck className="w-4 h-4" /> },
-    { title: 'Proyecto de Élite', icon: <Award className="w-4 h-4" /> }
+    { title: 'Fundamentos y Estrategia' },
+    { title: 'Implementación Técnica' },
+    { title: 'Optimización y Escala' },
+    { title: 'Liderazgo y Gestión' },
+    { title: 'Innovación Disruptiva' },
+    { title: 'Proyecto de Élite' }
 ];
 
 const MOTIVATIONAL_PHRASES = [
-    { text: "TU VOLUNTAD ES EL ÚNICO LÍMITE", color: "#F05A28", bg: "#1A1A1A" },
-    { text: "ESTRATEGIA, VISIÓN Y ACCIÓN", color: "#fbdace", bg: "#F05A28" },
-    { text: "EL ÉXITO ES UN HÁBITO", color: "#F05A28", bg: "#000000" }
+    { text: 'TU VOLUNTAD ES EL ÚNICO LÍMITE', color: '#F05A28', bg: '#1A1A1A' },
+    { text: 'ESTRATEGIA, VISIÓN Y ACCIÓN', color: '#fbdace', bg: '#F05A28' },
+    { text: 'EL ÉXITO ES UN HÁBITO', color: '#F05A28', bg: '#000000' }
 ];
 
+const getMasterById = (id) => MASTERS.find((m) => m.id === id);
+const getMasterDisplayName = (id) => getMasterById(id)?.desc || id || '';
+const buildCvSummary = (profile = {}) => ({
+    role: profile.currentRole || 'No especificado',
+    industry: profile.industry || 'No especificada',
+    experience: profile.yearsOfExperience ? `${profile.yearsOfExperience} años` : 'No especificada',
+    topSkills: (profile.skills || []).slice(0, 3),
+});
+
 const HomePage = () => {
-    const { isDarkMode } = useTheme();
     const { user } = useAuth();
     const location = useLocation();
-    const navigate = useNavigate();
+    const { isDarkMode } = useTheme();
+
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [analysis, setAnalysis] = useState(null);
@@ -41,8 +50,13 @@ const HomePage = () => {
     const [selectedMaster, setSelectedMaster] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [currentPhrase, setCurrentPhrase] = useState(0);
+    const [showMasterGate, setShowMasterGate] = useState(false);
+    const [masterReady, setMasterReady] = useState(false);
+    const [cvUploadedNotice, setCvUploadedNotice] = useState(false);
 
-    // Rotate phrases randomly
+    const getMasterStorageKey = (currentUser) =>
+        currentUser?.id ? `lar_selected_master_${currentUser.id}` : `lar_selected_master_${currentUser?.email || 'guest'}`;
+
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentPhrase((prev) => (prev + 1) % MOTIVATIONAL_PHRASES.length);
@@ -50,52 +64,41 @@ const HomePage = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // Force scroll to top on mount
     useEffect(() => {
-        const forceScroll = () => {
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-        };
-
-        forceScroll();
-        const timeout = setTimeout(forceScroll, 100);
-
-        if ('scrollRestoration' in window.history) {
-            window.history.scrollRestoration = 'manual';
+        if (!user) {
+            setMasterReady(false);
+            return;
         }
-
-        return () => clearTimeout(timeout);
-    }, []);
+        const storedMaster = localStorage.getItem(getMasterStorageKey(user));
+        if (storedMaster && MASTERS.some((m) => m.id === storedMaster)) {
+            setSelectedMaster(storedMaster);
+        }
+        setMasterReady(true);
+    }, [user]);
 
     useEffect(() => {
-        if (location.state?.openChatId) {
-            setChatId(location.state.openChatId);
-            setAnalysis({
-                id: 'existing',
-                extractedProfile: { currentRole: 'Historial' },
-                recommendation: { primarySpecialization: 'Revisando historial...' }
-            });
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    }, [location.state]);
+        if (!user || !masterReady) return;
+        const key = getMasterStorageKey(user);
+        if (selectedMaster) localStorage.setItem(key, selectedMaster);
+        else localStorage.removeItem(key);
+    }, [selectedMaster, user, masterReady]);
 
     useEffect(() => {
-        if (user) {
-            fetchHistory();
-        }
-    }, [user, chatId]);
+        setShowMasterGate(Boolean(masterReady && user && !selectedMaster));
+    }, [masterReady, user, selectedMaster]);
 
-    const fetchHistory = async () => {
-        try {
-            const res = await api.get('/chat');
-            if (res.data.success) {
-                setHistory(res.data.data.chats);
+    useEffect(() => {
+        if (!user) return;
+        const fetchHistory = async () => {
+            try {
+                const res = await api.get('/chat');
+                if (res.data.success) setHistory(res.data.data.chats);
+            } catch (err) {
+                console.error('Error fetching history:', err);
             }
-        } catch (err) {
-            console.error('Error fetching history:', err);
-        }
-    };
+        };
+        fetchHistory();
+    }, [user, chatId]);
 
     const handleDeleteChat = async (e, id) => {
         e.stopPropagation();
@@ -103,7 +106,6 @@ const HomePage = () => {
         try {
             await api.delete(`/chat/${id}`);
             if (chatId === id) setChatId(null);
-            fetchHistory();
         } catch (err) {
             console.error('Error deleting chat:', err);
         }
@@ -111,74 +113,106 @@ const HomePage = () => {
 
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
-        if (selectedFile) {
-            const ext = selectedFile.name.split('.').pop().toLowerCase();
-            if (['pdf'].includes(ext)) {
-                setFile(selectedFile);
-                setError('');
-            } else {
-                setError('Por favor sube un archivo PDF válido (Hoja de Vida)');
-                setFile(null);
-            }
+        if (!selectedFile) return;
+        const ext = selectedFile.name.split('.').pop().toLowerCase();
+        if (ext !== 'pdf') {
+            setError('Por favor sube un archivo PDF válido (Hoja de Vida)');
+            setFile(null);
+            return;
         }
+        setFile(selectedFile);
+        setError('');
     };
 
     const handleUpload = async () => {
         if (!file || !selectedMaster) return;
-
         setUploading(true);
         setError('');
-
-        const formData = new FormData();
-        formData.append('cv', file);
-        formData.append('master', selectedMaster);
-
         try {
+            const formData = new FormData();
+            formData.append('cv', file);
+            formData.append('master', selectedMaster);
+
             const uploadRes = await api.post('/cv/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
             if (uploadRes.data.success) {
                 const { cvAnalysisId, profile, recommendation } = uploadRes.data.data;
-                const analysisData = {
+                setAnalysis({
                     id: cvAnalysisId,
                     extractedProfile: profile,
-                    recommendation: recommendation
-                };
-                setAnalysis(analysisData);
-
-                const chatRes = await api.post('/chat', {
-                    title: `Consulta ${selectedMaster}: ${file.name}`,
-                    cvAnalysisId: cvAnalysisId
+                    recommendation
                 });
 
+                const chatRes = await api.post('/chat', {
+                    title: `Consulta ${getMasterDisplayName(selectedMaster)}: ${file.name}`,
+                    cvAnalysisId
+                });
                 if (chatRes.data.success) {
                     setChatId(chatRes.data.data.chat.id);
                 }
+                setCvUploadedNotice(true);
             }
         } catch (err) {
-            const msg = err.response?.data?.message || 'Error al procesar el archivo';
-            setError(msg);
+            setError(err.response?.data?.message || 'Error al procesar el archivo');
         } finally {
             setUploading(false);
         }
     };
 
-    const resetFlow = () => {
+    const handleMasterSelection = (masterId) => {
+        setSelectedMaster(masterId);
+        setShowMasterGate(false);
         setAnalysis(null);
         setFile(null);
         setChatId(null);
+        setCvUploadedNotice(false);
+    };
+
+    const handleChangeMaster = () => {
         setSelectedMaster(null);
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        setAnalysis(null);
+        setFile(null);
+        setChatId(null);
+        setCvUploadedNotice(false);
+        setShowMasterGate(true);
+    };
+
+    const handleNewChat = async () => {
+        if (!selectedMaster) {
+            setShowMasterGate(true);
+            return;
+        }
+        try {
+            const payload = { title: `Consulta ${getMasterDisplayName(selectedMaster)}` };
+            if (analysis?.id && analysis.id !== 'existing') {
+                payload.cvAnalysisId = analysis.id;
+            }
+            const chatRes = await api.post('/chat', payload);
+            if (chatRes.data.success) setChatId(chatRes.data.data.chat.id);
+        } catch (err) {
+            console.error('Error creating new chat:', err);
+            setError('No se pudo crear un nuevo chat.');
+        }
     };
 
     const currentStep = analysis ? 3 : selectedMaster ? 2 : 1;
+    const chatUnlocked = Boolean(selectedMaster && analysis);
+    const chatEnabled = Boolean(chatUnlocked && chatId);
+    const selectedMasterDisplayName = getMasterDisplayName(selectedMaster);
+    const cvSummary = buildCvSummary(analysis?.extractedProfile);
 
     return (
-        <div className="flex w-full min-h-[calc(100vh-120px)] relative overflow-hidden bg-transparent">
-            {/* 1. Solid Sidebar - Estilo Gemini/ChatGPT (Sin márgenes) */}
+        <div
+            className={`flex w-full min-h-[calc(100vh-120px)] relative overflow-hidden transition-colors duration-300 ${
+                isDarkMode ? 'bg-transparent' : 'bg-light-bg'
+            }`}
+        >
             <aside
-                className={`sidebar-transition flex-shrink-0 bg-white dark:bg-[#0A0A0A] border-r border-stone-200 dark:border-white/5 relative z-[60] overflow-hidden ${isSidebarOpen ? 'w-72 opacity-100 p-6' : 'w-0 opacity-0 p-0'}`}
+                className={`sidebar-transition flex-shrink-0 relative z-[60] overflow-hidden border-r transition-colors duration-300 ${
+                    isDarkMode ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-stone-200'
+                } ${isSidebarOpen ? 'w-72 opacity-100 p-6' : 'w-0 opacity-0 p-0'}`}
                 style={{ marginLeft: 0 }}
             >
                 <div className="h-full flex flex-col space-y-6">
@@ -195,15 +229,12 @@ const HomePage = () => {
                                 <div key={chat.id} className="group relative">
                                     <button
                                         onClick={() => {
+                                            if (!chatUnlocked) return;
                                             setChatId(chat.id);
-                                            setAnalysis({
-                                                id: 'existing',
-                                                extractedProfile: { currentRole: 'Historial' },
-                                                recommendation: { primarySpecialization: 'Revisando historial...' }
-                                            });
                                             window.scrollTo({ top: 0, behavior: 'smooth' });
                                         }}
-                                        className={`w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 border ${chatId === chat.id ? 'bg-orange-accent/10 border-orange-accent/20 text-orange-accent' : 'border-transparent hover:bg-stone-100 dark:hover:bg-white/5 opacity-60 hover:opacity-100'}`}
+                                        disabled={!chatUnlocked}
+                                        className={`w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 border ${chatId === chat.id ? 'bg-orange-accent/10 border-orange-accent/20 text-orange-accent' : 'border-transparent hover:bg-stone-100 dark:hover:bg-white/5 opacity-60 hover:opacity-100'} ${!chatUnlocked ? 'opacity-40 cursor-not-allowed hover:bg-transparent' : ''}`}
                                     >
                                         <MessageSquare size={14} className="flex-shrink-0" />
                                         <p className="font-bold text-[9px] truncate uppercase tracking-tighter">{chat.title}</p>
@@ -221,17 +252,13 @@ const HomePage = () => {
                         )}
                     </div>
 
-                    <button onClick={resetFlow} className="w-full py-4 rounded-xl bg-orange-accent text-white font-bold text-[10px] tracking-[0.2em] shadow-xl shadow-orange-accent/20 hover:scale-[1.01] active:scale-[0.99] transition-all">
-                        NUEVA CONSULTA
+                    <button onClick={handleNewChat} className="w-full py-4 rounded-xl bg-orange-accent text-white font-bold text-[10px] tracking-[0.2em] shadow-xl shadow-orange-accent/20 hover:scale-[1.01] active:scale-[0.99] transition-all">
+                        NUEVO CHAT
                     </button>
                 </div>
             </aside>
 
-            {/* 2. Main Workspace */}
             <div className="flex-1 flex flex-col min-w-0 transform-gpu overflow-y-auto overflow-x-hidden">
-
-
-                {/* 2a. Floating Trigger - Animated Hamburger */}
                 <button
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                     className={`fixed top-0 left-0 z-[100] w-12 h-12 rounded-br-2xl bg-orange-accent text-white shadow-2xl shadow-orange-accent/40 flex flex-col items-center justify-center transition-all duration-300 ${isSidebarOpen ? 'w-14 h-14' : 'hover:w-14 hover:h-14'} border-none m-0 p-0`}
@@ -244,16 +271,37 @@ const HomePage = () => {
                 </button>
 
                 <div className="w-full space-y-8 py-6 px-4 sm:px-8 lg:px-12 animate-in fade-in duration-700">
-                    {/* Stepper - 5% Larger + White High-Visibility Line */}
                     <header className="w-full max-w-xl mx-auto mb-6">
                         <div className="flex items-center justify-between relative px-2">
-                            <div className="absolute top-1/2 left-0 w-full h-[4px] -translate-y-1/2 bg-white shadow-[0_0_15px_rgba(255,255,255,0.6)] z-0 rounded-full"></div>
+                            <div
+                                className={`absolute top-1/2 left-0 w-full h-[4px] -translate-y-1/2 z-0 rounded-full transition-colors duration-300 ${
+                                    isDarkMode
+                                        ? 'bg-white shadow-[0_0_15px_rgba(255,255,255,0.6)]'
+                                        : 'bg-stone-200 shadow-[0_0_12px_rgba(0,0,0,0.12)]'
+                                }`}
+                            ></div>
                             {[1, 2, 3].map((s) => (
                                 <div key={s} className="relative z-10 flex flex-col items-center gap-3">
-                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold transition-all border-2 ${currentStep >= s ? 'bg-orange-accent text-white border-orange-accent shadow-[0_0_15px_rgba(240,90,40,0.5)] scale-110' : 'bg-stone-900 border-white/10 text-stone-500'}`}>
+                                    <div
+                                        className={`w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold transition-all border-2 ${
+                                            currentStep >= s
+                                                ? 'bg-orange-accent text-white border-orange-accent shadow-[0_0_15px_rgba(240,90,40,0.5)] scale-110'
+                                                : isDarkMode
+                                                    ? 'bg-stone-900 border-white/10 text-stone-500'
+                                                    : 'bg-white border-stone-200 text-stone-500'
+                                        }`}
+                                    >
                                         {s === 1 ? <BookOpen size={16} /> : s === 2 ? <Upload size={16} /> : <Sparkles size={16} />}
                                     </div>
-                                    <span className={`text-[8px] font-bold tracking-[0.25em] transition-opacity uppercase ${currentStep === s ? 'opacity-100 text-orange-accent' : 'opacity-40 text-stone-400'}`}>
+                                    <span
+                                        className={`text-[8px] font-bold tracking-[0.25em] transition-opacity uppercase ${
+                                            currentStep === s
+                                                ? 'opacity-100 text-orange-accent'
+                                                : isDarkMode
+                                                    ? 'opacity-40 text-stone-400'
+                                                    : 'opacity-60 text-stone-500'
+                                        }`}
+                                    >
                                         {s === 1 ? 'MÁSTER' : s === 2 ? 'CV' : 'RUTA'}
                                     </span>
                                 </div>
@@ -261,165 +309,261 @@ const HomePage = () => {
                         </div>
                     </header>
 
-                    <div className="flex flex-col xl:flex-row gap-10 items-start">
-                        {/* Chat Section - Focused Dimensions (Shorter) */}
-                        <div className="flex-[1] h-[45vh] flex flex-col min-h-[380px]">
-                            {/* Mantra text above chat */}
+                    <div className="flex flex-col xl:flex-row gap-8 items-start">
+                        <div className="flex-[1.35] w-full h-[66vh] min-h-[560px] flex flex-col">
                             <div className="mb-3 pl-1 flex items-center gap-3">
-                                <span className="text-[10px] font-bold tracking-[0.45em] text-white uppercase">TRAZA TU</span>
+                                <span
+                                    className={`text-[10px] font-bold tracking-[0.45em] uppercase ${
+                                        isDarkMode ? 'text-white' : 'text-stone-900'
+                                    }`}
+                                >
+                                    TRAZA TU
+                                </span>
                                 <span className="text-[10px] font-bold tracking-[0.45em] text-[#F05A28] uppercase">FUTURO</span>
                                 <div className="h-[1px] flex-1 bg-gradient-to-r from-orange-accent/30 to-transparent"></div>
                             </div>
-                            <div className="flex-1 bg-stone-900 dark:bg-[#0D0D0D] p-1 rounded-[2rem] border border-white/5">
+
+                            {cvUploadedNotice && (
+                                <div
+                                    className={`mb-3 rounded-xl border px-4 py-2 text-[10px] uppercase tracking-[0.2em] font-bold ${
+                                        isDarkMode
+                                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                                            : 'border-emerald-500/40 bg-emerald-50 text-emerald-700'
+                                    }`}
+                                >
+                                    CV subido y analizado. El chat ya estÃ¡ habilitado.
+                                </div>
+                            )}
+
+                            <div
+                                className={`flex-1 p-1 rounded-[2rem] border transition-colors duration-300 ${
+                                    isDarkMode ? 'bg-stone-900 border-white/5' : 'bg-white border-stone-200'
+                                }`}
+                            >
                                 <ChatComponent
-                                    chatId={chatId}
+                                    chatId={chatEnabled ? chatId : null}
                                     cvAnalysisId={analysis?.id}
                                     userName={user?.name || user?.email?.split('@')[0]}
                                     selectedMaster={selectedMaster}
-                                    sprints={SPRINTS.map(s => s.title)}
+                                    sprints={SPRINTS.map((s) => s.title)}
+                                    chatEnabled={chatUnlocked}
+                                    lockedMessage={selectedMaster ? 'Sube y analiza tu CV para habilitar el chat.' : 'Selecciona un mÃ¡ster para continuar.'}
                                 />
                             </div>
                         </div>
 
-                        {/* Masters Section - Scaled Up +5% (wider than chat) */}
-                        <div className="flex-[1.05] xl:max-w-2xl space-y-8">
-                            {!analysis ? (
-                                <div className="space-y-8 animate-in slide-in-from-right duration-700">
-                                    {!selectedMaster ? (
-                                        <div className="space-y-6">
-                                            {/* Solid Brand Color Rotator */}
-                                            <div className="flex justify-center h-10">
-                                                <div
-                                                    className="px-8 py-2 rounded-xl flex items-center gap-4 shadow-2xl"
-                                                    style={{
-                                                        backgroundColor: MOTIVATIONAL_PHRASES[currentPhrase].bg === 'transparent' ? '#1A1A1A' : MOTIVATIONAL_PHRASES[currentPhrase].bg,
-                                                        border: `1px solid ${MOTIVATIONAL_PHRASES[currentPhrase].color === '#F05A28' ? 'rgba(240, 90, 40, 0.4)' : 'rgba(255,255,255,0.1)'}`
-                                                    }}
-                                                >
-                                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: MOTIVATIONAL_PHRASES[currentPhrase].color }}></div>
-                                                    <p
-                                                        className="text-[10px] font-bold tracking-[0.35em] uppercase"
-                                                        style={{ color: MOTIVATIONAL_PHRASES[currentPhrase].color }}
-                                                    >
-                                                        {MOTIVATIONAL_PHRASES[currentPhrase].text}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-5">
-                                                <div className="w-16 h-[2px] bg-orange-accent rounded-full shadow-[0_0_10px_rgba(240,90,40,0.3)]"></div>
-                                                <h2 className={`text-4xl font-bold tracking-tighter uppercase leading-tight ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
-                                                    SELECCIONA TU <span className="text-orange-accent italic">MÁSTER</span>
-                                                </h2>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 gap-5">
-                                                {MASTERS.map((m, idx) => (
-                                                    <button
-                                                        key={m.id}
-                                                        onClick={() => setSelectedMaster(m.id)}
-                                                        className="p-8 rounded-[2.5rem] border text-left transition-all duration-300 group relative overflow-hidden transform hover:-translate-y-1.5 bg-stone-900 border-white/5 hover:border-orange-accent/40 shadow-2xl outline-none focus:outline-none focus:ring-0"
-                                                    >
-                                                        <div className="absolute top-0 right-0 w-36 h-36 blur-[70px] opacity-10 group-hover:opacity-30 transition-all" style={{ backgroundColor: m.color }}></div>
-                                                        <div className="relative z-10 flex items-center justify-between">
-                                                            <div className="flex items-center gap-6">
-                                                                <span
-                                                                    className="text-5xl font-black italic transition-all duration-500"
-                                                                    style={{
-                                                                        color: m.color,
-                                                                        opacity: 0.45,
-                                                                        filter: `drop-shadow(0 0 15px ${m.color})`,
-                                                                        WebkitTextStroke: `1px ${m.color}`
-                                                                    }}
-                                                                >
-                                                                    {String(idx + 1).padStart(2, '0')}
-                                                                </span>
-                                                                <div className="space-y-1.5">
-                                                                    <h4 className="text-xl font-bold uppercase tracking-tight italic text-white">{m.name}</h4>
-                                                                    <p className="text-[9px] font-medium uppercase tracking-[0.15em] opacity-40 group-hover:opacity-80 text-white">{m.desc}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="w-10 h-10 rounded-2xl bg-orange-accent text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-all">
-                                                                <ArrowRight size={20} />
-                                                            </div>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
+                        <div className="flex-[0.75] w-full xl:max-w-md space-y-6 xl:pt-6">
+                            {!selectedMaster ? (
+                                <div className="space-y-6 animate-in slide-in-from-right duration-700">
+                                    <div className="flex justify-center h-10">
+                                        <div
+                                            className="px-8 py-2 rounded-xl flex items-center gap-4 shadow-2xl"
+                                            style={{
+                                                backgroundColor: isDarkMode
+                                                    ? MOTIVATIONAL_PHRASES[currentPhrase].bg
+                                                    : '#ffffff',
+                                                border: `1px solid ${
+                                                    MOTIVATIONAL_PHRASES[currentPhrase].color === '#F05A28'
+                                                        ? 'rgba(240, 90, 40, 0.4)'
+                                                        : isDarkMode
+                                                            ? 'rgba(255,255,255,0.1)'
+                                                            : 'rgba(0,0,0,0.06)'
+                                                }`
+                                            }}
+                                        >
+                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: MOTIVATIONAL_PHRASES[currentPhrase].color }}></div>
+                                            <p className="text-[10px] font-bold tracking-[0.35em] uppercase" style={{ color: MOTIVATIONAL_PHRASES[currentPhrase].color }}>
+                                                {MOTIVATIONAL_PHRASES[currentPhrase].text}
+                                            </p>
                                         </div>
-                                    ) : (
-                                        <div className="p-10 rounded-[3rem] border relative overflow-hidden bg-[#0D0D0D] border-white/10 shadow-3xl">
-                                            <div className="flex items-center justify-between border-b border-white/10 pb-6 mb-8">
-                                                <button onClick={() => setSelectedMaster(null)} className="text-[10px] font-bold hover:text-orange-accent tracking-widest uppercase transition-all flex items-center gap-2 text-white/50">
-                                                    ← VOLVER
-                                                </button>
-                                                <span className="text-[11px] font-bold py-2 px-6 rounded-full text-white uppercase tracking-widest bg-orange-accent shadow-[0_0_15px_rgba(240,90,40,0.4)]">{selectedMaster}</span>
-                                            </div>
+                                    </div>
 
-                                            <div className="flex flex-col items-center text-center space-y-10">
-                                                <div className="relative group cursor-pointer" onClick={() => document.getElementById('cv-input').click()}>
-                                                    <div className="absolute -inset-8 rounded-full blur-[70px] opacity-20 bg-orange-accent animate-pulse"></div>
-                                                    <div className="relative w-32 h-32 rounded-[3rem] flex items-center justify-center border-2 border-dashed border-orange-accent/40 bg-orange-accent/5 hover:border-orange-accent transition-all hover:scale-105">
-                                                        <Upload className="text-orange-accent" size={40} />
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {MASTERS.map((m, idx) => (
+                                            <button
+                                                key={m.id}
+                                                onClick={() => handleMasterSelection(m.id)}
+                                                className={`p-6 rounded-[2rem] border text-left transition-all duration-300 group relative overflow-hidden transform hover:-translate-y-1 shadow-2xl ${
+                                                    isDarkMode
+                                                        ? 'bg-stone-900 border-white/5 hover:border-orange-accent/40'
+                                                        : 'bg-white border-stone-200 hover:border-orange-accent/40'
+                                                }`}
+                                            >
+                                                <div className="absolute top-0 right-0 w-36 h-36 blur-[70px] opacity-10 group-hover:opacity-30 transition-all" style={{ backgroundColor: m.color }}></div>
+                                                <div className="relative z-10 flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-4xl font-black italic" style={{ color: m.color, opacity: 0.45 }}>
+                                                            {String(idx + 1).padStart(2, '0')}
+                                                        </span>
+                                                        <div>
+                                                            <h4
+                                                                className={`text-lg font-bold uppercase tracking-tight italic ${
+                                                                    isDarkMode ? 'text-white' : 'text-stone-900'
+                                                                }`}
+                                                            >
+                                                                {m.name}
+                                                            </h4>
+                                                            <p
+                                                                className={`text-[9px] font-medium uppercase tracking-[0.15em] ${
+                                                                    isDarkMode ? 'opacity-50 text-white' : 'text-stone-500'
+                                                                }`}
+                                                            >
+                                                                {m.desc}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-9 h-9 rounded-xl bg-orange-accent text-white flex items-center justify-center">
+                                                        <ArrowRight size={18} />
                                                     </div>
                                                 </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : !analysis ? (
+                                <div
+                                    className={`p-6 rounded-[2rem] border shadow-3xl ${
+                                        isDarkMode ? 'bg-[#0D0D0D] border-white/10' : 'bg-white border-stone-200'
+                                    }`}
+                                >
+                                    <div
+                                        className={`flex items-center justify-between border-b pb-4 mb-6 ${
+                                            isDarkMode ? 'border-white/10' : 'border-stone-200'
+                                        }`}
+                                    >
+                                        <button
+                                            onClick={handleChangeMaster}
+                                            className={`text-[10px] font-bold tracking-widest uppercase transition-all ${
+                                                isDarkMode ? 'text-white/50 hover:text-orange-accent' : 'text-stone-500 hover:text-orange-accent'
+                                            }`}
+                                        >
+                                            ← VOLVER
+                                        </button>
+                                        <span className="text-[10px] font-bold py-2 px-4 rounded-full text-white uppercase tracking-widest bg-orange-accent">
+                                            {selectedMaster}
+                                        </span>
+                                    </div>
 
-                                                <div className="space-y-3">
-                                                    <h3 className="text-3xl font-bold tracking-tight uppercase italic text-white">VINCULAR POTENCIAL</h3>
-                                                    <p className="text-[11px] font-medium opacity-40 uppercase tracking-[0.25em] leading-relaxed text-white">Analizaremos tu trayectoria técnica <br /> para el despliegue de tu carrera.</p>
-                                                </div>
-
-                                                <div className="w-full space-y-5">
-                                                    <label className={`flex items-center justify-center gap-4 w-full h-18 rounded-2xl border-2 font-bold text-[11px] tracking-widest transition-all cursor-pointer ${file ? 'border-orange-accent text-orange-accent bg-orange-accent/10' : 'border-white/5 bg-stone-900/40 opacity-50 hover:opacity-100 text-white'}`}>
-                                                        <FileText size={24} />
-                                                        <span className="truncate max-w-[250px]">{file ? file.name : 'SELECCIONAR PDF'}</span>
-                                                        <input id="cv-input" type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
-                                                    </label>
-
-                                                    {file && (
-                                                        <button onClick={handleUpload} disabled={uploading} className="w-full h-18 rounded-2xl bg-orange-accent text-white font-bold text-[11px] tracking-[0.4em] shadow-[0_15px_30px_rgba(240,90,40,0.3)] hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
-                                                            {uploading ? <Loader2 className="animate-spin" size={24} /> : 'INICIAR ANÁLISIS'}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
+                                    <div className="flex flex-col items-center text-center space-y-5">
+                                        <div className="relative w-20 h-20 rounded-[1.5rem] flex items-center justify-center border-2 border-dashed border-orange-accent/40 bg-orange-accent/5">
+                                            <Upload className="text-orange-accent" size={30} />
                                         </div>
-                                    )}
+
+                                        <div className="space-y-2">
+                                            <h3
+                                                className={`text-xl font-bold tracking-tight uppercase italic ${
+                                                    isDarkMode ? 'text-white' : 'text-stone-900'
+                                                }`}
+                                            >
+                                                VINCULAR POTENCIAL
+                                            </h3>
+                                            <p
+                                                className={`text-[10px] font-medium uppercase tracking-[0.2em] leading-relaxed ${
+                                                    isDarkMode ? 'opacity-50 text-white' : 'text-stone-500'
+                                                }`}
+                                            >
+                                                Sube tu CV para habilitar el chat y generar tu resumen.
+                                            </p>
+                                        </div>
+
+                                        <div className="w-full space-y-3">
+                                            <label
+                                                className={`flex items-center justify-center gap-3 w-full h-12 rounded-xl border-2 font-bold text-[10px] tracking-widest transition-all cursor-pointer ${
+                                                    file
+                                                        ? isDarkMode
+                                                            ? 'border-orange-accent text-orange-accent bg-orange-accent/10'
+                                                            : 'border-orange-accent text-orange-accent bg-orange-50'
+                                                        : isDarkMode
+                                                            ? 'border-white/10 bg-stone-900/40 text-white/70'
+                                                            : 'border-stone-300 bg-white text-stone-700'
+                                                }`}
+                                            >
+                                                <FileText size={16} />
+                                                <span className="truncate max-w-[220px]">{file ? file.name : 'SELECCIONAR PDF'}</span>
+                                                <input id="cv-input" type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
+                                            </label>
+
+                                            <button
+                                                onClick={handleUpload}
+                                                disabled={!file || uploading}
+                                                className="w-full h-12 rounded-xl bg-orange-accent text-white font-bold text-[10px] tracking-[0.25em] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                            >
+                                                {uploading ? <Loader2 className="animate-spin" size={18} /> : 'ANALIZAR CV'}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="space-y-8">
-                                    <div className="p-5 rounded-[2rem] border bg-[#0D0D0D] border-white/10 shadow-xl">
-                                        <div className="flex items-center gap-6">
-                                            <div className="w-12 h-12 rounded-2xl bg-orange-accent flex items-center justify-center text-white shadow-lg shadow-orange-accent/30">
-                                                <CheckCircle size={28} />
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <h3 className="text-xl font-bold tracking-tight uppercase italic text-white">PERFIL <span className="text-orange-accent">VALIDADO</span></h3>
-                                                <p className="text-[9px] font-bold tracking-[0.3em] opacity-40 uppercase text-white">{selectedMaster}</p>
-                                            </div>
-                                        </div>
+                                <div
+                                    className={`p-6 rounded-[2rem] border shadow-3xl space-y-5 ${
+                                        isDarkMode ? 'bg-[#0D0D0D] border-white/10' : 'bg-white border-stone-200'
+                                    }`}
+                                >
+                                    <div
+                                        className={`flex items-center justify-between border-b pb-4 ${
+                                            isDarkMode ? 'border-white/10' : 'border-stone-200'
+                                        }`}
+                                    >
+                                        <button
+                                            onClick={handleChangeMaster}
+                                            className={`text-[10px] font-bold tracking-widest uppercase transition-all ${
+                                                isDarkMode ? 'text-white/50 hover:text-orange-accent' : 'text-stone-500 hover:text-orange-accent'
+                                            }`}
+                                        >
+                                            ← VOLVER
+                                        </button>
+                                        <span className="text-[10px] font-bold py-2 px-4 rounded-full text-white uppercase tracking-widest bg-orange-accent">
+                                            {selectedMaster}
+                                        </span>
                                     </div>
 
-                                    <div className="space-y-5">
-                                        <div className="flex items-center gap-4 pl-6">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-orange-accent shadow-[0_0_8px_rgba(240,90,40,0.8)]"></div>
-                                            <p className="text-[11px] font-bold uppercase tracking-[0.45em] opacity-40 text-white">Hoja de Ruta</p>
-                                        </div>
-                                        <div className="space-y-4">
-                                            {SPRINTS.map((sprint, idx) => (
-                                                <div key={idx} className={`p-6 rounded-3xl border transition-all hover:border-orange-accent/40 bg-stone-900 border-white/5`}>
-                                                    <div className="flex items-center gap-6">
-                                                        <div className="w-10 h-10 rounded-2xl bg-orange-accent/10 border border-orange-accent/20 text-orange-accent flex items-center justify-center text-sm font-bold italic">{idx + 1}</div>
-                                                        <span className="text-sm font-bold italic tracking-tight uppercase text-white">{sprint.title}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                    <div
+                                        className={`flex items-center gap-3 p-3 rounded-xl border ${
+                                            isDarkMode ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-emerald-500/40 bg-emerald-50'
+                                        }`}
+                                    >
+                                        <CheckCircle
+                                            size={18}
+                                            className={isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}
+                                        />
+                                        <p
+                                            className={`text-[10px] uppercase tracking-[0.15em] font-bold ${
+                                                isDarkMode ? 'text-emerald-300' : 'text-emerald-700'
+                                            }`}
+                                        >
+                                            CV subido y validado
+                                        </p>
                                     </div>
 
-                                    <button onClick={resetFlow} className="w-full py-6 text-[10px] font-bold uppercase tracking-[0.55em] opacity-30 hover:opacity-100 hover:text-orange-accent transition-all flex items-center justify-center gap-5 text-white">
-                                        ↺ REINICIAR SISTEMA
-                                    </button>
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] uppercase tracking-[0.2em] text-orange-accent font-bold">Resumen del CV</p>
+                                        <div
+                                            className={`space-y-2 text-[11px] ${
+                                                isDarkMode ? 'text-white/80' : 'text-stone-700'
+                                            }`}
+                                        >
+                                            <p>
+                                                <span className={isDarkMode ? 'text-white/50' : 'text-stone-500'}>
+                                                    Máster:
+                                                </span>{' '}
+                                                {selectedMasterDisplayName}
+                                            </p>
+                                            <p>
+                                                <span className={isDarkMode ? 'text-white/50' : 'text-stone-500'}>
+                                                    Rol:
+                                                </span>{' '}
+                                                {cvSummary.role}
+                                            </p>
+                                            <p>
+                                                <span className={isDarkMode ? 'text-white/50' : 'text-stone-500'}>
+                                                    Skills:
+                                                </span>{' '}
+                                                {cvSummary.topSkills.length
+                                                    ? cvSummary.topSkills.join(', ')
+                                                    : 'No especificadas'}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -428,13 +572,41 @@ const HomePage = () => {
             </div>
 
             {error && (
-                <div className="fixed bottom-10 right-10 flex items-center gap-6 p-10 bg-[#0D0D0D] border-l-[10px] border-orange-accent rounded-[3.5rem] text-white shadow-[0_50px_100px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-10 duration-500 z-[100] max-w-lg">
-                    <div className="w-16 h-16 rounded-full bg-orange-accent/10 flex items-center justify-center flex-shrink-0 border border-orange-accent/20">
-                        <AlertCircle size={32} className="text-orange-accent" />
+                <div className="fixed bottom-10 right-10 flex items-center gap-4 p-6 bg-[#0D0D0D] border-l-[6px] border-orange-accent rounded-3xl text-white shadow-[0_30px_80px_rgba(0,0,0,0.8)] z-[100] max-w-lg">
+                    <div className="w-12 h-12 rounded-full bg-orange-accent/10 flex items-center justify-center flex-shrink-0 border border-orange-accent/20">
+                        <AlertCircle size={24} className="text-orange-accent" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-[11px] tracking-widest uppercase mb-1.5 text-orange-accent">SISTEMA LÄR</h4>
-                        <p className="text-[13px] font-medium uppercase tracking-wider leading-relaxed opacity-90">{error}</p>
+                        <h4 className="font-bold text-[11px] tracking-widest uppercase mb-1 text-orange-accent">SISTEMA LAR</h4>
+                        <p className="text-[12px] font-medium uppercase tracking-wider leading-relaxed opacity-90">{error}</p>
+                    </div>
+                </div>
+            )}
+
+            {showMasterGate && (
+                <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+                    <div className="w-full max-w-3xl rounded-[2.5rem] border border-orange-accent/25 bg-[#0D0D0D] p-8 sm:p-10 shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
+                        <div className="text-center mb-8">
+                            <p className="text-[10px] tracking-[0.35em] uppercase text-orange-accent font-bold mb-3">Primer Paso</p>
+                            <h3 className="text-3xl sm:text-4xl font-bold uppercase tracking-tight text-white">
+                                Elige Tu <span className="text-orange-accent italic">MÁSTER</span>
+                            </h3>
+                            <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-white/50">
+                                El chat se habilita después de subir y analizar tu CV.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {MASTERS.map((m) => (
+                                <button
+                                    key={m.id}
+                                    onClick={() => handleMasterSelection(m.id)}
+                                    className="rounded-2xl border border-white/10 bg-stone-900 p-5 text-left hover:border-orange-accent/60 transition-all"
+                                >
+                                    <p className="text-lg font-bold italic text-white">{m.name}</p>
+                                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/50 mt-1">{m.desc}</p>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}

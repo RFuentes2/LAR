@@ -14,12 +14,84 @@ const ensureOpenAIConfigured = () => {
     }
 };
 
+const FALLBACK_SKILL_KEYWORDS = {
+    'analitica-datos': ['data', 'datos', 'sql', 'python', 'power bi', 'tableau', 'analytics', 'analítica'],
+    tecnologia: ['software', 'developer', 'ingeniero', 'tecnologia', 'tecnología', 'digital', 'arquitectura'],
+    'ia-automatizacion': ['ia', 'inteligencia artificial', 'machine learning', 'automatizacion', 'automation', 'ml'],
+    finanzas: ['finanzas', 'finance', 'contabilidad', 'tesoreria', 'tesorería', 'inversion', 'inversión'],
+    talento: ['rrhh', 'recursos humanos', 'people', 'talento', 'reclutamiento', 'liderazgo', 'liderazgo'],
+    emprendimiento: ['startup', 'emprendimiento', 'negocio', 'ventas', 'founder'],
+    'mercado-cliente': ['marketing', 'cliente', 'brand', 'growth', 'producto'],
+    operaciones: ['operaciones', 'logistica', 'logística', 'supply chain', 'procesos'],
+    comunicacion: ['comunicacion', 'comunicación', 'comms', 'relaciones publicas', 'presentaciones'],
+};
+
+const pickFallbackSpecialization = (profile = {}) => {
+    const haystack = [
+        profile.currentRole,
+        profile.industry,
+        profile.summary,
+        ...(profile.skills || []),
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+    let bestId = 'analitica-datos';
+    let bestScore = -1;
+
+    Object.entries(FALLBACK_SKILL_KEYWORDS).forEach(([id, words]) => {
+        const score = words.reduce((acc, w) => acc + (haystack.includes(w) ? 1 : 0), 0);
+        if (score > bestScore) {
+            bestScore = score;
+            bestId = id;
+        }
+    });
+
+    return Object.values(SPECIALIZATIONS).find((s) => s.id === bestId) || Object.values(SPECIALIZATIONS)[0];
+};
+
+const buildFallbackProfile = (cvText = '') => {
+    const lines = cvText
+        .split(/\n+/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+    const firstLine = lines[0] || '';
+    const guessedName = firstLine.length > 2 && firstLine.length < 80 ? firstLine : 'Candidato';
+    const yearsMatch = cvText.match(/(\d{1,2})\s*(años|anos|years)/i);
+
+    const skills = ['Comunicación', 'Trabajo en equipo', 'Resolución de problemas'];
+    const skillHints = ['sql', 'python', 'excel', 'power bi', 'marketing', 'finanzas', 'liderazgo'];
+    const lower = cvText.toLowerCase();
+    skillHints.forEach((hint) => {
+        if (lower.includes(hint)) {
+            skills.push(hint.toUpperCase());
+        }
+    });
+
+    return {
+        name: guessedName,
+        currentRole: 'Profesional',
+        yearsOfExperience: yearsMatch ? parseInt(yearsMatch[1], 10) : 3,
+        industry: 'No especificada',
+        skills: Array.from(new Set(skills)).slice(0, 8),
+        education: [],
+        experience: [],
+        languages: [],
+        certifications: [],
+        summary: 'Perfil profesional generado en modo de respaldo por indisponibilidad temporal de IA.',
+    };
+};
+
 /**
  * Analyze CV text and extract structured profile data
  * @param {string} cvText - Raw text extracted from CV/PDF
  * @returns {Object} Extracted profile data
  */
 const extractProfileFromCV = async (cvText) => {
+    if (!openai) {
+        return buildFallbackProfile(cvText);
+    }
     ensureOpenAIConfigured();
 
     const prompt = `Eres un experto en análisis de CVs y perfiles profesionales. 
@@ -75,6 +147,21 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
  * @returns {Object} Recommendation with specialization, reasoning, and match score
  */
 const generateRecommendation = async (profile, sourceType = 'pdf') => {
+    if (!openai) {
+        const specialization = pickFallbackSpecialization(profile);
+        return {
+            primarySpecialization: specialization.name,
+            primarySpecializationId: specialization.id,
+            secondarySpecializations: [],
+            matchScore: 78,
+            reasoning: `Se recomienda ${specialization.name} con base en las señales detectadas en tu perfil. Esta recomendación fue generada en modo de respaldo.`,
+            keyStrengths: (profile.skills || []).slice(0, 3),
+            growthAreas: ['Profundización técnica', 'Liderazgo estratégico'],
+            specialization,
+            subjects: specialization.subjects,
+            sprintUrl: specialization.sprintUrl,
+        };
+    }
     ensureOpenAIConfigured();
 
     const specializationsList = getSpecializationNamesForPrompt();
@@ -150,6 +237,13 @@ Los IDs válidos son: comunicacion, emprendimiento, finanzas, talento, tecnologi
  * @returns {string} AI response
  */
 const generateChatResponse = async (messages, userProfile = null, recommendation = null) => {
+    if (!openai) {
+        const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+        if (!userProfile || !recommendation) {
+            return `¡Recibido! Ya tengo tu mensaje: "${lastUserMessage}". Para darte una ruta personalizada, adjunta tu hoja de vida en PDF y continuaré con el análisis.`;
+        }
+        return `Gracias por tu mensaje. Con base en tu perfil, tu mejor enfoque actual es ${recommendation.primarySpecialization || recommendation.specialization?.name}. Si quieres, te explico el sprint 1 o cómo aprovechar esta ruta en tu trabajo actual.`;
+    }
     ensureOpenAIConfigured();
 
     const systemPrompt = `Eres un asesor académico experto y amigable de LAR University, una institución de educación ejecutiva de élite. 

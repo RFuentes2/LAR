@@ -3,6 +3,17 @@ import { Send, Bot, User, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 
+const MASTER_NAME_BY_CODE = {
+    mintear: 'Master in intelligence',
+    mtecmba: 'tech management mba',
+    'datalar-mba': 'data driven mba',
+};
+
+const getMasterDisplayName = (masterCode) => {
+    if (!masterCode) return '';
+    return MASTER_NAME_BY_CODE[String(masterCode).toLowerCase()] || masterCode;
+};
+
 const SUGGESTED_QUESTIONS = [
     "¿De qué se trata el sprint?",
     "¿Cuál es el sprint 1?",
@@ -10,7 +21,16 @@ const SUGGESTED_QUESTIONS = [
     "¿Qué habilidades desarrollaré?"
 ];
 
-const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints }) => {
+const ChatComponent = ({
+    chatId,
+    cvAnalysisId,
+    userName,
+    selectedMaster,
+    sprints,
+    onFirstUserMessage,
+    chatEnabled = true,
+    lockedMessage = 'Sube tu CV para habilitar el chat.',
+}) => {
     const { isDarkMode } = useTheme();
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -18,6 +38,7 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
     const lastHandledAnalysisId = useRef(null);
+    const selectedMasterDisplayName = getMasterDisplayName(selectedMaster);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,7 +53,7 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
     // Handle automatic greeting when analysis is ready
     useEffect(() => {
         if (cvAnalysisId && cvAnalysisId !== lastHandledAnalysisId.current && chatId) {
-            const welcomeText = `Hola ${userName || 'estudiante'}, es un gusto saludarte. Ya que perteneces al master ${selectedMaster}, tu ruta ideal para completar tu camino de excelencia es:\n\n${sprints.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n¿En qué sprint te gustaría profundizar hoy?`;
+            const welcomeText = `Hola ${userName || 'estudiante'}, es un gusto saludarte. Ya que perteneces al master ${selectedMasterDisplayName}, tu ruta ideal para completar tu camino de excelencia es:\n\n${sprints.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n¿En qué sprint te gustaría profundizar hoy?`;
 
             // Artificial delay to feel natural after analysis
             setTimeout(() => {
@@ -44,7 +65,7 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
                 lastHandledAnalysisId.current = cvAnalysisId;
             }, 1000);
         }
-    }, [cvAnalysisId, chatId, userName, selectedMaster, sprints]);
+    }, [cvAnalysisId, chatId, userName, selectedMasterDisplayName, sprints]);
 
     useEffect(scrollToBottom, [messages]);
 
@@ -64,12 +85,16 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
     };
 
     const userMessagesCount = messages.filter(m => m.role === 'user').length;
-    const isLimitReached = userMessagesCount >= 2;
-
+    
     const handleSendMessage = async (e, textOverride = null) => {
         if (e) e.preventDefault();
         const content = textOverride || input;
-        if (!content.trim() || sending || !chatId || isLimitReached) return;
+        if (!content.trim() || sending || !chatId || !chatEnabled) return;
+
+        const isFirstUserMessage = userMessagesCount === 0;
+        if (isFirstUserMessage && typeof onFirstUserMessage === 'function') {
+            onFirstUserMessage();
+        }
 
         const userMsg = { role: 'user', content: content.trim() };
         setMessages((prev) => [...prev, userMsg]);
@@ -126,11 +151,18 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
                         <p className={`text-[8px] uppercase font-bold tracking-[0.15em] ${isDarkMode ? 'text-dark-muted' : 'text-light-muted'}`}>Analista Élite</p>
                     </div>
                 </div>
-                {chatId && (
-                    <div className={`text-[8px] uppercase tracking-widest font-black px-2.5 py-1 rounded-lg border ${isDarkMode ? 'bg-orange-accent/10 border-orange-accent/20 text-orange-accent' : 'bg-orange-accent/10 border-orange-accent/30 text-orange-accent'}`}>
-                        Consultas: {userMessagesCount}/2
-                    </div>
-                )}
+                <div className="flex flex-col items-end gap-1.5">
+                    {selectedMaster && (
+                        <div className={`text-[8px] uppercase tracking-widest font-black px-2.5 py-1 rounded-lg border ${isDarkMode ? 'bg-white/5 border-white/10 text-white/80' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
+                            Máster: {selectedMasterDisplayName}
+                        </div>
+                    )}
+                    {chatId && (
+                        <div className={`text-[8px] uppercase tracking-widest font-black px-2.5 py-1 rounded-lg border ${isDarkMode ? 'bg-orange-accent/10 border-orange-accent/20 text-orange-accent' : 'bg-orange-accent/10 border-orange-accent/30 text-orange-accent'}`}>
+                            Consultas: {userMessagesCount}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Messages Area - Compact */}
@@ -145,10 +177,16 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
                         </div>
                         <div className="space-y-2 max-w-[280px] mx-auto">
                             <h4 className={`text-[1.32rem] font-black tracking-tighter italic uppercase leading-none ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                SISTEMA LISTO PARA EL <span className="text-orange-accent">ANÁLISIS</span>
+                                {chatEnabled ? (
+                                    <>SISTEMA LISTO PARA EL <span className="text-orange-accent">ANÁLISIS</span></>
+                                ) : (
+                                    <>CHAT <span className="text-orange-accent">BLOQUEADO</span></>
+                                )}
                             </h4>
                             <p className={`text-[10px] font-bold uppercase tracking-[0.1em] leading-relaxed ${isDarkMode ? 'text-white/60' : 'text-slate-600'}`}>
-                                Selecciona un máster y vincula tu CV para iniciar el <span className={`${isDarkMode ? 'text-white/90' : 'text-slate-900'}`}>despliegue técnico</span>.
+                                {chatEnabled
+                                    ? 'Ya puedes conversar con LÄR AI sobre tus sprints.'
+                                    : lockedMessage}
                             </p>
                         </div>
                     </div>
@@ -201,7 +239,7 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
             {/* Actions & Input - Compact */}
             <div className={`p-4 border-t ${isDarkMode ? 'border-dark-border bg-dark-card/10' : 'border-light-border bg-light-bg/10'} space-y-3`}>
                 {/* Suggestions */}
-                {chatId && !isLimitReached && !sending && messages.length > 0 && (
+                {chatEnabled && chatId && !sending && messages.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 animate-in fade-in duration-300">
                         {SUGGESTED_QUESTIONS.map((q, i) => (
                             <button
@@ -222,14 +260,14 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={!chatId ? "Completa el análisis..." : isLimitReached ? "Límite alcanzado" : "CONSULTAR..."}
+                        placeholder={!chatEnabled ? 'Sube tu CV para habilitar el chat...' : !chatId ? 'Preparando chat...' : 'CONSULTAR...'}
                         className={`input-field pr-12 h-11 text-[10px] font-black uppercase tracking-[0.1em] rounded-xl border transition-all ${!isDarkMode ? 'bg-white text-slate-900 border-slate-200 placeholder:text-slate-400' : 'bg-[#12100E] border-stone-800 text-white placeholder:text-white focus:border-orange-accent/30'
                             } disabled:opacity-40 disabled:cursor-not-allowed`}
-                        disabled={sending || !chatId || isLimitReached}
+                        disabled={sending || !chatId || !chatEnabled}
                     />
                     <button
                         type="submit"
-                        disabled={!input.trim() || sending || !chatId || isLimitReached}
+                        disabled={!input.trim() || sending || !chatId || !chatEnabled}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-orange-accent text-white rounded-lg hover:opacity-90 transition-all disabled:opacity-50"
                     >
                         <Send size={14} />
@@ -241,3 +279,5 @@ const ChatComponent = ({ chatId, cvAnalysisId, userName, selectedMaster, sprints
 };
 
 export default ChatComponent;
+
+

@@ -36,6 +36,7 @@ const HomePage = () => {
     const [uploading, setUploading] = useState(false);
     const [analysis, setAnalysis] = useState(null);
     const [chatId, setChatId] = useState(location.state?.openChatId || null);
+    const [isHistoryChatOpen, setIsHistoryChatOpen] = useState(Boolean(location.state?.openChatId));
     const [history, setHistory] = useState([]);
     const [error, setError] = useState('');
     const [selectedMaster, setSelectedMaster] = useState(null);
@@ -71,11 +72,10 @@ const HomePage = () => {
     useEffect(() => {
         if (location.state?.openChatId) {
             setChatId(location.state.openChatId);
-            setAnalysis({
-                id: 'existing',
-                extractedProfile: { currentRole: 'Historial' },
-                recommendation: { primarySpecialization: 'Revisando historial...' }
-            });
+            setAnalysis(null);
+            setSelectedMaster(null);
+            setFile(null);
+            setIsHistoryChatOpen(true);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [location.state]);
@@ -102,7 +102,10 @@ const HomePage = () => {
         if (!window.confirm('¿Eliminar esta conversación?')) return;
         try {
             await api.delete(`/chat/${id}`);
-            if (chatId === id) setChatId(null);
+            if (chatId === id) {
+                setChatId(null);
+                setIsHistoryChatOpen(false);
+            }
             fetchHistory();
         } catch (err) {
             console.error('Error deleting chat:', err);
@@ -146,14 +149,16 @@ const HomePage = () => {
                     recommendation: recommendation
                 };
                 setAnalysis(analysisData);
-
-                const chatRes = await api.post('/chat', {
-                    title: `Consulta ${selectedMaster}: ${file.name}`,
-                    cvAnalysisId: cvAnalysisId
-                });
-
-                if (chatRes.data.success) {
-                    setChatId(chatRes.data.data.chat.id);
+                setIsHistoryChatOpen(false);
+                // Keep the same chat unless there is no active chat yet.
+                if (!chatId) {
+                    const chatRes = await api.post('/chat', {
+                        title: `Consulta ${selectedMaster}: ${file.name}`,
+                        cvAnalysisId: cvAnalysisId
+                    });
+                    if (chatRes.data.success) {
+                        setChatId(chatRes.data.data.chat.id);
+                    }
                 }
             }
         } catch (err) {
@@ -169,10 +174,12 @@ const HomePage = () => {
         setFile(null);
         setChatId(null);
         setSelectedMaster(null);
+        setIsHistoryChatOpen(false);
         window.scrollTo({ top: 0, behavior: 'instant' });
     };
 
     const currentStep = analysis ? 3 : selectedMaster ? 2 : 1;
+    const showCvPanel = !analysis && !isHistoryChatOpen;
 
     return (
         <div className="flex w-full min-h-[calc(100vh-120px)] relative overflow-hidden bg-transparent">
@@ -196,11 +203,10 @@ const HomePage = () => {
                                     <button
                                         onClick={() => {
                                             setChatId(chat.id);
-                                            setAnalysis({
-                                                id: 'existing',
-                                                extractedProfile: { currentRole: 'Historial' },
-                                                recommendation: { primarySpecialization: 'Revisando historial...' }
-                                            });
+                                            setAnalysis(null);
+                                            setSelectedMaster(null);
+                                            setFile(null);
+                                            setIsHistoryChatOpen(true);
                                             window.scrollTo({ top: 0, behavior: 'smooth' });
                                         }}
                                         className={`w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 border ${chatId === chat.id ? 'bg-orange-accent/10 border-orange-accent/20 text-orange-accent' : 'border-transparent hover:bg-stone-100 dark:hover:bg-white/5 opacity-60 hover:opacity-100'}`}
@@ -257,16 +263,21 @@ const HomePage = () => {
                         </div>
                     </header>
 
-                    <div className="flex flex-col xl:flex-row gap-10 items-start">
+                    <div className="flex flex-col xl:flex-row items-center gap-8 xl:gap-10">
                         {/* Chat Section - Focused Dimensions (Shorter) */}
-                        <div className="flex-[1] h-[45vh] flex flex-col min-h-[380px]">
+                        <div className="w-full xl:flex-1 h-[62vh] min-h-[560px] flex flex-col">
                             {/* Mantra text above chat */}
                             <div className="mb-3 pl-1 flex items-center gap-3">
-                                <span className="text-[10px] font-bold tracking-[0.45em] text-white uppercase">TRAZA TU</span>
+                                <span className={`text-[10px] font-bold tracking-[0.45em] uppercase ${isDarkMode ? 'text-white' : 'text-light-text'}`}>TRAZA TU</span>
                                 <span className="text-[10px] font-bold tracking-[0.45em] text-[#F05A28] uppercase">FUTURO</span>
                                 <div className="h-[1px] flex-1 bg-gradient-to-r from-orange-accent/30 to-transparent"></div>
+                                {selectedMaster && (
+                                    <span className="px-4 py-1.5 rounded-full text-[10px] font-bold tracking-[0.18em] uppercase bg-orange-accent/15 border border-orange-accent/40 text-orange-accent whitespace-nowrap">
+                                        MÁSTER: {selectedMaster}
+                                    </span>
+                                )}
                             </div>
-                            <div className="flex-1 bg-stone-900 dark:bg-[#0D0D0D] p-1 rounded-[2rem] border border-white/5">
+                            <div className={`flex-1 p-1 rounded-[2rem] border ${isDarkMode ? 'bg-stone-900 border-white/5' : 'bg-white/85 border-light-border shadow-lg'}`}>
                                 <ChatComponent
                                     chatId={chatId}
                                     cvAnalysisId={analysis?.id}
@@ -278,9 +289,10 @@ const HomePage = () => {
                         </div>
 
                         {/* Masters Section - Scaled Up +5% (wider than chat) */}
-                        <div className="flex-[1.05] xl:max-w-2xl space-y-8">
+                        {showCvPanel && (
+                        <div className="w-full xl:w-[420px] xl:flex-none h-[62vh] min-h-[560px]">
                             {!analysis ? (
-                                <div className="space-y-8 animate-in slide-in-from-right duration-700">
+                                <div className="h-full space-y-6 animate-in slide-in-from-right duration-700">
                                     {!selectedMaster ? (
                                         <div className="space-y-6">
                                             {/* Solid Brand Color Rotator */}
@@ -304,7 +316,7 @@ const HomePage = () => {
 
                                             <div className="flex items-center gap-5">
                                                 <div className="w-16 h-[2px] bg-orange-accent rounded-full shadow-[0_0_10px_rgba(240,90,40,0.3)]"></div>
-                                                <h2 className="text-4xl font-bold tracking-tighter uppercase leading-tight text-white">
+                                                <h2 className={`text-4xl font-bold tracking-tighter uppercase leading-tight ${isDarkMode ? 'text-white' : 'text-light-text'}`}>
                                                     SELECCIONA TU <span className="text-orange-accent italic">MÁSTER</span>
                                                 </h2>
                                             </div>
@@ -313,8 +325,11 @@ const HomePage = () => {
                                                 {MASTERS.map((m, idx) => (
                                                     <button
                                                         key={m.id}
-                                                        onClick={() => setSelectedMaster(m.id)}
-                                                        className={`p-8 rounded-[2.5rem] border text-left transition-all duration-300 group relative overflow-hidden transform hover:-translate-y-1.5 bg-stone-900 border-white/5 hover:border-orange-accent/40 shadow-2xl`}
+                                                        onClick={() => {
+                                                            setSelectedMaster(m.id);
+                                                            setIsHistoryChatOpen(false);
+                                                        }}
+                                                        className={`p-8 rounded-[2.5rem] border text-left transition-all duration-300 group relative overflow-hidden transform hover:-translate-y-1.5 shadow-2xl ${isDarkMode ? 'bg-stone-900 border-white/5 hover:border-orange-accent/40' : 'bg-white border-light-border hover:border-orange-accent/50'}`}
                                                     >
                                                         <div className="absolute top-0 right-0 w-36 h-36 blur-[70px] opacity-10 group-hover:opacity-30 transition-all" style={{ backgroundColor: m.color }}></div>
                                                         <div className="relative z-10 flex items-center justify-between">
@@ -323,8 +338,8 @@ const HomePage = () => {
                                                                     {String(idx + 1).padStart(2, '0')}
                                                                 </span>
                                                                 <div className="space-y-1.5">
-                                                                    <h4 className="text-xl font-bold uppercase tracking-tight italic text-white">{m.name}</h4>
-                                                                    <p className="text-[9px] font-medium uppercase tracking-[0.15em] opacity-40 group-hover:opacity-80 text-white">{m.desc}</p>
+                                                                    <h4 className={`text-xl font-bold uppercase tracking-tight italic ${isDarkMode ? 'text-white' : 'text-light-text'}`}>{m.name}</h4>
+                                                                    <p className={`text-[9px] font-medium uppercase tracking-[0.15em] opacity-40 group-hover:opacity-80 ${isDarkMode ? 'text-white' : 'text-light-muted'}`}>{m.desc}</p>
                                                                 </div>
                                                             </div>
                                                             <div className="w-10 h-10 rounded-2xl bg-orange-accent text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-all">
@@ -336,36 +351,36 @@ const HomePage = () => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className={`p-10 rounded-[3rem] border transition-all duration-500 relative overflow-hidden bg-[#0D0D0D] border-white/10 shadow-3xl`}>
-                                            <div className="flex items-center justify-between border-b border-white/10 pb-6 mb-8">
-                                                <button onClick={() => setSelectedMaster(null)} className="text-[10px] font-bold hover:text-orange-accent tracking-widest uppercase transition-all flex items-center gap-2 text-white/50">
+                                        <div className="p-7 rounded-[2.2rem] border transition-all duration-500 relative overflow-hidden h-full flex flex-col shadow-xl bg-[#F7F8FA] border-light-border dark:bg-[#0D0D0D] dark:border-white/10 dark:shadow-3xl">
+                                            <div className="flex items-center justify-between border-b pb-6 mb-8 border-light-border dark:border-white/10">
+                                                <button onClick={() => setSelectedMaster(null)} className="text-[10px] font-bold hover:text-orange-accent tracking-widest uppercase transition-all flex items-center gap-2 text-light-muted dark:text-white/50">
                                                     ← VOLVER
                                                 </button>
                                                 <span className="text-[11px] font-bold py-2 px-6 rounded-full text-white uppercase tracking-widest bg-orange-accent shadow-[0_0_15px_rgba(240,90,40,0.4)]">{selectedMaster}</span>
                                             </div>
 
-                                            <div className="flex flex-col items-center text-center space-y-10">
+                                            <div className="flex flex-col items-center text-center space-y-7 flex-1 justify-center">
                                                 <div className="relative group cursor-pointer" onClick={() => document.getElementById('cv-input').click()}>
                                                     <div className="absolute -inset-8 rounded-full blur-[70px] opacity-20 bg-orange-accent animate-pulse"></div>
-                                                    <div className="relative w-32 h-32 rounded-[3rem] flex items-center justify-center border-2 border-dashed border-orange-accent/40 bg-orange-accent/5 hover:border-orange-accent transition-all hover:scale-105">
+                                                    <div className="relative w-28 h-28 rounded-[2.4rem] flex items-center justify-center border-2 border-dashed border-orange-accent/40 hover:border-orange-accent transition-all hover:scale-105 bg-orange-accent/10 dark:bg-orange-accent/5">
                                                         <Upload className="text-orange-accent" size={40} />
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-3">
-                                                    <h3 className="text-3xl font-bold tracking-tight uppercase italic text-white">VINCULAR POTENCIAL</h3>
-                                                    <p className="text-[11px] font-medium opacity-40 uppercase tracking-[0.25em] leading-relaxed text-white">Analizaremos tu trayectoria técnica <br /> para el despliegue de tu carrera.</p>
+                                                    <h3 className="text-3xl font-bold tracking-tight uppercase italic text-light-text dark:text-white">VINCULAR POTENCIAL</h3>
+                                                    <p className="text-[11px] font-medium opacity-70 uppercase tracking-[0.25em] leading-relaxed text-light-muted dark:text-white/50">Analizaremos tu trayectoria técnica <br /> para el despliegue de tu carrera.</p>
                                                 </div>
 
                                                 <div className="w-full space-y-5">
-                                                    <label className={`flex items-center justify-center gap-4 w-full h-18 rounded-2xl border-2 font-bold text-[11px] tracking-widest transition-all cursor-pointer ${file ? 'border-orange-accent text-orange-accent bg-orange-accent/10' : 'border-white/5 bg-white/5 opacity-50 hover:opacity-100 text-white'}`}>
+                                                    <label className={`flex items-center justify-center gap-4 w-full h-16 rounded-2xl border-2 font-bold text-[11px] tracking-widest transition-all cursor-pointer ${file ? 'border-orange-accent text-orange-accent bg-orange-accent/10' : 'border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-white opacity-80 hover:opacity-100 cv-upload-pulse'}`}>
                                                         <FileText size={24} />
                                                         <span className="truncate max-w-[250px]">{file ? file.name : 'SELECCIONAR PDF'}</span>
                                                         <input id="cv-input" type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
                                                     </label>
 
                                                     {file && (
-                                                        <button onClick={handleUpload} disabled={uploading} className="w-full h-18 rounded-2xl bg-orange-accent text-white font-bold text-[11px] tracking-[0.4em] shadow-[0_15px_30px_rgba(240,90,40,0.3)] hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                                                        <button onClick={handleUpload} disabled={uploading} className="w-full h-16 rounded-2xl bg-orange-accent text-white font-bold text-[11px] tracking-[0.4em] shadow-[0_15px_30px_rgba(240,90,40,0.3)] hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
                                                             {uploading ? <Loader2 className="animate-spin" size={24} /> : 'INICIAR ANÁLISIS'}
                                                         </button>
                                                     )}
@@ -411,6 +426,7 @@ const HomePage = () => {
                                 </div>
                             )}
                         </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -438,6 +454,19 @@ const HomePage = () => {
                 .custom-scrollbar::-webkit-scrollbar-thumb {
                     background: rgba(240, 90, 40, 0.3);
                     border-radius: 10px;
+                }
+                @keyframes cvUploadSoftPulse {
+                    0%, 100% {
+                        border-color: rgba(240, 90, 40, 0.28);
+                        box-shadow: 0 0 0 0 rgba(240, 90, 40, 0.16);
+                    }
+                    50% {
+                        border-color: rgba(240, 90, 40, 0.7);
+                        box-shadow: 0 0 0 6px rgba(240, 90, 40, 0.08);
+                    }
+                }
+                .cv-upload-pulse {
+                    animation: cvUploadSoftPulse 2.2s ease-in-out infinite;
                 }
             `}} />
         </div>
